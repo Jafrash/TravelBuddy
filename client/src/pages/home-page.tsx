@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import SimpleFooter from "@/components/SimpleFooter";
 import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/HowItWorks";
 import FeaturedAgents from "@/components/FeaturedAgents";
@@ -21,7 +21,7 @@ const HomePage = () => {
         <TestimonialsSection />
         <CTASection />
       </main>
-      <Footer />
+      <SimpleFooter />
     </div>
   );
 };
