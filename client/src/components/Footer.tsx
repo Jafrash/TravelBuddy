@@ -36,13 +36,13 @@ const Footer = () => {
             <h3 className="font-heading font-semibold text-lg mb-4">For Travelers</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/">
-                  <a className="text-neutral-medium hover:text-white transition-colors">How It Works</a>
+                <Link href="/" className="text-neutral-medium hover:text-white transition-colors">
+                  How It Works
                 </Link>
               </li>
               <li>
-                <Link href="/agents">
-                  <a className="text-neutral-medium hover:text-white transition-colors">Find an Agent</a>
+                <Link href="/agents" className="text-neutral-medium hover:text-white transition-colors">
+                  Find an Agent
                 </Link>
               </li>
               <li>
@@ -62,13 +62,13 @@ const Footer = () => {
             <h3 className="font-heading font-semibold text-lg mb-4">For Agents</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/auth">
-                  <a className="text-neutral-medium hover:text-white transition-colors">Join Our Network</a>
+                <Link href="/auth" className="text-neutral-medium hover:text-white transition-colors">
+                  Join Our Network
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/agent">
-                  <a className="text-neutral-medium hover:text-white transition-colors">Agent Dashboard</a>
+                <Link href="/dashboard/agent" className="text-neutral-medium hover:text-white transition-colors">
+                  Agent Dashboard
                 </Link>
               </li>
               <li>
