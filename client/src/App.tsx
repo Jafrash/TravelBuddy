@@ -28,8 +28,7 @@ function Router() {
   return (
     <Switch>
       {/* Main application routes */}
-      <Route path="/" component={BasicTest} />
-      <Route path="/app-test" component={AppTest} />
+      <Route path="/" component={HomePage} />
       <Route path="/home" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/agents" component={AgentsPage} />
@@ -43,6 +42,8 @@ function Router() {
       <Route path="/test" component={FullLayoutTestPage} />
       <Route path="/test/header" component={HeaderTestPage} />
       <Route path="/test/simple" component={TestPage} />
+      <Route path="/app-test" component={AppTest} />
+      <Route path="/basic-test" component={BasicTest} />
       
       {/* 404 fallback */}
       <Route path="*" component={NotFound} />

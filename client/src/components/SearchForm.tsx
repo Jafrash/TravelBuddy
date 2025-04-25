@@ -1,162 +1,221 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useLocation } from "wouter";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { destinations, budgetRanges } from "@/assets/destinations";
-import TravelStyleSelector from "./TravelStyleSelector";
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CalendarIcon, Search, MapPin } from 'lucide-react';
+import { useNavigate } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import TravelStyleSelector from './TravelStyleSelector';
 
+// Define the form schema
 const searchFormSchema = z.object({
-  destination: z.string().min(1, "Destination is required"),
-  dates: z.string().min(1, "Travel dates are required"),
-  budget: z.string().min(1, "Budget range is required"),
-  travelStyles: z.array(z.string()).min(1, "Select at least one travel style"),
+  destination: z.string().min(2, { message: 'Please enter a destination' }),
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
+  budget: z.string().optional(),
+  travelStyles: z.array(z.string()).optional(),
 });
 
 type SearchFormValues = z.infer<typeof searchFormSchema>;
 
+const budgetRanges = [
+  { value: 'budget', label: 'Budget Friendly' },
+  { value: 'mid-range', label: 'Mid-Range' },
+  { value: 'luxury', label: 'Luxury' },
+  { value: 'ultra-luxury', label: 'Ultra Luxury' },
+];
+
 const SearchForm = () => {
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
+  const [, navigate] = useNavigate();
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchFormSchema),
     defaultValues: {
-      destination: "",
-      dates: "",
-      budget: "",
+      destination: '',
+      startDate: undefined,
+      endDate: undefined,
+      budget: '',
       travelStyles: [],
     },
   });
 
   const onSubmit = (data: SearchFormValues) => {
-    toast({
-      title: "Search initiated",
-      description: `Looking for agents specializing in ${data.destination}`,
-    });
-    
-    // Navigate to agents page with query parameters
-    setLocation(`/agents?destination=${encodeURIComponent(data.destination)}&budget=${data.budget}`);
+    console.log('Search form data:', data);
+    // Include selected travel styles
+    data.travelStyles = selectedStyles;
+
+    // Convert to query params and navigate to agents page
+    const params = new URLSearchParams();
+    if (data.destination) params.append('destination', data.destination);
+    if (data.budget) params.append('budget', data.budget);
+    if (data.startDate) params.append('startDate', data.startDate.toISOString());
+    if (data.endDate) params.append('endDate', data.endDate.toISOString());
+    if (data.travelStyles && data.travelStyles.length > 0) {
+      params.append('styles', data.travelStyles.join(','));
+    }
+
+    navigate(`/agents?${params.toString()}`);
   };
 
-  // Update the travelStyles field when selected styles change
-  form.watch(() => {
-    form.setValue("travelStyles", selectedStyles);
-  });
-
   return (
-    <Card className="bg-white text-left">
-      <CardContent className="p-6">
-        <h2 className="text-primary font-heading font-semibold text-xl mb-4">Where would you like to go?</h2>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Destination Field */}
+          <FormField
+            control={form.control}
+            name="destination"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Where to?</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="City, country, or region"
+                      className="pl-10"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          {/* Date Range Fields */}
+          <div className="flex flex-col space-y-2">
+            <FormLabel>When?</FormLabel>
+            <div className="grid grid-cols-2 gap-2">
               <FormField
                 control={form.control}
-                name="destination"
+                name="startDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-neutral-dark mb-1 text-sm font-medium">
-                      Destination
-                    </FormLabel>
-                    <FormControl>
-                      <Select onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a destination" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {destinations.map((destination) => (
-                            <SelectItem key={destination} value={destination}>
-                              {destination}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={'outline'}
+                            className={cn(
+                              'pl-3 text-left font-normal',
+                              !field.value && 'text-muted-foreground'
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, 'MMM d')
+                            ) : (
+                              <span>From</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
-                name="dates"
+                name="endDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-neutral-dark mb-1 text-sm font-medium">
-                      Travel Dates
-                    </FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Jun 15 - Jun 30, 2023" 
-                        {...field} 
-                      />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={'outline'}
+                            className={cn(
+                              'pl-3 text-left font-normal',
+                              !field.value && 'text-muted-foreground'
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, 'MMM d')
+                            ) : (
+                              <span>To</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                          disabled={(date) => {
+                            const start = form.getValues('startDate');
+                            return start ? date < start : false;
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </FormItem>
                 )}
               />
             </div>
+          </div>
 
-            <FormField
-              control={form.control}
-              name="travelStyles"
-              render={() => (
-                <FormItem>
-                  <FormLabel className="block text-neutral-dark mb-1 text-sm font-medium">
-                    Travel Style
-                  </FormLabel>
+          {/* Budget Field */}
+          <FormField
+            control={form.control}
+            name="budget"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Budget</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <TravelStyleSelector 
-                      selectedStyles={selectedStyles} 
-                      onStylesChange={setSelectedStyles} 
-                    />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select budget" />
+                    </SelectTrigger>
                   </FormControl>
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    {budgetRanges.map((budget) => (
+                      <SelectItem key={budget.value} value={budget.value}>
+                        {budget.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="budget"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="block text-neutral-dark mb-1 text-sm font-medium">
-                    Budget Range
-                  </FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select budget range" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {budgetRanges.map((range) => (
-                          <SelectItem key={range.value} value={range.value}>
-                            {range.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                </FormItem>
-              )}
+          {/* Travel Styles Field */}
+          <div className="flex flex-col space-y-2">
+            <FormLabel>Travel Style</FormLabel>
+            <TravelStyleSelector
+              selectedStyles={selectedStyles}
+              onStylesChange={setSelectedStyles}
             />
+          </div>
+        </div>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-accent hover:bg-accent/90 text-white py-3 rounded-md font-medium text-lg"
-            >
-              Find My Travel Agent
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+        <div className="flex justify-center">
+          <Button type="submit" size="lg" className="px-8">
+            <Search className="mr-2 h-4 w-4" />
+            Find Travel Agents
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 };
 
