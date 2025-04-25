@@ -11,29 +11,12 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Add a direct path to serve landing HTML if all else fails
+// Get directory path for later use
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-app.get('/landing', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'client', 'src', 'landing.html'));
-});
 
-// Add a simple health check that will definitely work
+// Simple API health check
 app.get('/health', (req, res) => {
   res.send('OK - Server is healthy');
-});
-
-// Add a direct root handler as a fallback
-app.get('/test', (req, res) => {
-  res.send(`
-    <html>
-      <head><title>Server Test</title></head>
-      <body>
-        <h1>Server is running!</h1>
-        <p>Current time: ${new Date().toLocaleString()}</p>
-        <p>This is a test page to verify the server is accessible.</p>
-      </body>
-    </html>
-  `);
 });
 
 app.use((req, res, next) => {

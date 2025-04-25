@@ -10,41 +10,19 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Add a direct landing page for connectivity testing
-  app.get("/connectivity-test", (req, res) => {
-    res.send(`
-      <html>
-        <head>
-          <title>TravelBuddy - Connected!</title>
-          <style>
-            body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-            h1 { color: #2563eb; }
-            .success { color: #10b981; font-weight: bold; }
-            .info { background: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <h1>TravelBuddy Connectivity Test</h1>
-          <p class="success">✓ Server is connected and responding!</p>
-          
-          <div class="info">
-            <p>Current time: ${new Date().toLocaleString()}</p>
-            <p>Server environment: ${process.env.NODE_ENV || 'development'}</p>
-          </div>
-          
-          <h2>Available Test Endpoints:</h2>
-          <ul>
-            <li><a href="/api/health">API Health Check</a></li>
-            <li><a href="/api/agents">List of Travel Agents</a></li>
-          </ul>
-        </body>
-      </html>
-    `);
-  });
-  
-  // Add a fallback handler for root path
-  app.get("/", (req, res) => {
-    res.redirect("/connectivity-test");
+  // Simple API documentation endpoint for developers
+  app.get("/api/docs", (req, res) => {
+    res.json({
+      message: "TravelBuddy API Documentation",
+      version: "1.0.0",
+      endpoints: [
+        { path: "/api/health", method: "GET", description: "API health check" },
+        { path: "/api/agents", method: "GET", description: "Get all travel agents" },
+        { path: "/api/user", method: "GET", description: "Get current authenticated user" },
+        { path: "/api/trip-preferences", method: "GET", description: "Get trip preferences" },
+        { path: "/api/itineraries", method: "GET", description: "Get itineraries" }
+      ]
+    });
   });
 
   // sets up /api/register, /api/login, /api/logout, /api/user
