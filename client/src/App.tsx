@@ -11,6 +11,7 @@ import TestPage from "@/pages/test-page";
 import HeaderTestPage from "@/pages/header-test-page";
 import FullLayoutTestPage from "@/pages/full-layout-test-page";
 import AppTest from "@/pages/app-test";
+import BasicTest from "@/pages/basic-test";
 
 // Main application pages
 import HomePage from "@/pages/home-page";
@@ -27,7 +28,8 @@ function Router() {
   return (
     <Switch>
       {/* Main application routes */}
-      <Route path="/" component={AppTest} />
+      <Route path="/" component={BasicTest} />
+      <Route path="/app-test" component={AppTest} />
       <Route path="/home" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/agents" component={AgentsPage} />
@@ -50,14 +52,17 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      <div className="bg-white p-8 rounded-xl shadow-lg">
+        <h1 className="text-3xl font-bold text-center mb-4">TravelBuddy</h1>
+        <p className="text-lg mb-8 text-center">Welcome to our travel planning application</p>
+        <div className="flex justify-center">
+          <a href="/app-test" className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            Launch App
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }
 
