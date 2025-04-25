@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import TestPage from "@/pages/test-page";
 import HeaderTestPage from "@/pages/header-test-page";
 import FullLayoutTestPage from "@/pages/full-layout-test-page";
+import AppTest from "@/pages/app-test";
 
 // Main application pages
 import HomePage from "@/pages/home-page";
@@ -26,7 +27,8 @@ function Router() {
   return (
     <Switch>
       {/* Main application routes */}
-      <Route path="/" component={HomePage} />
+      <Route path="/" component={AppTest} />
+      <Route path="/home" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/agents" component={AgentsPage} />
       <Route path="/agents/:id" component={AgentDetailsPage} />
