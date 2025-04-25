@@ -23,7 +23,7 @@ const MobileMenu = ({ isOpen, onClose, user, onLogout }: MobileMenuProps) => {
         <div className="flex justify-between items-center mb-8">
           <Link href="/" className="flex items-center">
             <MapPin className="h-7 w-7 text-primary" />
-            <span className="ml-2 text-lg font-heading font-bold text-neutral-dark">Wanderwise</span>
+            <span className="ml-2 text-lg font-heading font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">TravelBuddy</span>
           </Link>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-6 w-6 text-neutral-dark" />

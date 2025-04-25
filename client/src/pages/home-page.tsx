@@ -9,7 +9,7 @@ import { AgentProfile, User } from "@shared/schema";
 
 const HomePage = () => {
   // Fetch featured agents
-  const { data: agents } = useQuery({
+  const { data: agents } = useQuery<(AgentProfile & User)[]>({
     queryKey: ['/api/agents'],
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -171,7 +171,7 @@ const HomePage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {agents?.slice(0, 3).map((agent) => (
+              {agents && agents.length > 0 ? agents.slice(0, 3).map((agent: AgentProfile & User) => (
                 <div key={agent.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                   <div className="p-6">
                     <div className="flex items-center mb-4">
@@ -190,7 +190,7 @@ const HomePage = () => {
                     <p className="text-gray-600 mb-4">{agent.specialization || 'Travel Expert'}</p>
                     
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {agent.regions?.slice(0, 3).map((region, idx) => (
+                      {agent.regions && agent.regions.length > 0 && agent.regions.slice(0, 3).map((region: string, idx: number) => (
                         <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
                           {region}
                         </span>
@@ -202,7 +202,11 @@ const HomePage = () => {
                     </Link>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="col-span-1 md:col-span-3 text-center py-8">
+                  <p className="text-gray-500">Loading agents...</p>
+                </div>
+              )}
             </div>
             
             <div className="text-center mt-12">

@@ -45,7 +45,7 @@ const Header = () => {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <MapPin className="h-8 w-8 text-primary" />
-            <span className="ml-2 text-xl font-heading font-bold">Wanderwise</span>
+            <span className="ml-2 text-xl font-heading font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">TravelBuddy</span>
           </Link>
           
           {/* Navigation */}
