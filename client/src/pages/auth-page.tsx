@@ -1,9 +1,7 @@
-import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
 import { Link } from "wouter";
+import { toast } from "@/hooks/use-toast";
 
 // Login form schema
 const loginSchema = z.object({
@@ -38,15 +37,6 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const AuthPage = () => {
   const [, setLocation] = useLocation();
-  const { user, loginMutation, registerMutation } = useAuth();
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (user) {
-      const dashboardPath = user.role === "agent" ? "/dashboard/agent" : "/dashboard/traveler";
-      setLocation(dashboardPath);
-    }
-  }, [user, setLocation]);
 
   // Login form
   const loginForm = useForm<LoginFormValues>({
@@ -71,11 +61,23 @@ const AuthPage = () => {
   });
 
   const onLoginSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
+    // Demo mode - just show toast instead of using loginMutation
+    toast({
+      title: "Login Attempted",
+      description: `User: ${data.username} (demo mode - not connecting to backend)`,
+    });
+    // Go to test page for now
+    setLocation("/");
   };
 
   const onRegisterSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate(data);
+    // Demo mode - just show toast instead of using registerMutation
+    toast({
+      title: "Registration Attempted",
+      description: `User: ${data.username}, Role: ${data.role} (demo mode - not connecting to backend)`,
+    });
+    // Go to test page for now
+    setLocation("/");
   };
 
   // Function to handle tab switching
@@ -151,10 +153,9 @@ const AuthPage = () => {
                       />
                       <Button 
                         type="submit" 
-                        className="w-full" 
-                        disabled={loginMutation.isPending}
+                        className="w-full"
                       >
-                        {loginMutation.isPending ? "Logging in..." : "Login"}
+                        Login
                       </Button>
                     </form>
                   </Form>
@@ -277,10 +278,9 @@ const AuthPage = () => {
                       )}
                       <Button 
                         type="submit" 
-                        className="w-full" 
-                        disabled={registerMutation.isPending}
+                        className="w-full"
                       >
-                        {registerMutation.isPending ? "Creating account..." : "Register"}
+                        Register
                       </Button>
                     </form>
                   </Form>
