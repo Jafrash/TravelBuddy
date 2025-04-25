@@ -84,11 +84,9 @@ const AuthPage = () => {
       <div className="flex-1 flex items-center justify-center p-6 md:p-10 bg-white">
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <Link href="/">
-              <a className="flex items-center">
-                <MapPin className="h-8 w-8 text-primary" />
-                <span className="ml-2 text-xl font-heading font-bold">Wanderwise</span>
-              </a>
+            <Link href="/" className="flex items-center">
+              <MapPin className="h-8 w-8 text-primary" />
+              <span className="ml-2 text-xl font-heading font-bold">Wanderwise</span>
             </Link>
           </div>
 
@@ -149,7 +147,7 @@ const AuthPage = () => {
                 <CardFooter className="flex justify-center">
                   <p className="text-sm text-neutral-dark">
                     Don't have an account?{" "}
-                    <Button type="button" variant="link" className="p-0" onClick={() => document.querySelector('[data-value="register"]')?.click()}>
+                    <Button type="button" variant="link" className="p-0" onClick={() => (document.querySelector('[data-value="register"]') as HTMLElement)?.click()}>
                       Register
                     </Button>
                   </p>

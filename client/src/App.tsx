@@ -5,6 +5,7 @@ import TestPage from "@/pages/test-page";
 import HeaderTestPage from "@/pages/header-test-page";
 import FullLayoutTestPage from "@/pages/full-layout-test-page";
 import NotFound from "@/pages/not-found";
+import AuthPage from "@/pages/auth-page";
 
 function Router() {
   return (
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/header" component={HeaderTestPage} />
       <Route path="/simple" component={TestPage} />
       <Route path="/notfound" component={NotFound} />
+      <Route path="/auth" component={AuthPage} />
       <Route path="*" component={FullLayoutTestPage} />
     </Switch>
   );
