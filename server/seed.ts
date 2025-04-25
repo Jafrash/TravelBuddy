@@ -12,15 +12,36 @@ async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
-async function seedDatabase() {
+async function seedDatabase(force = false) {
   console.log("🌱 Starting database seeding...");
 
   // Check if we already have agent users
   const existingAgents = await db.select().from(users).where(eq(users.role, "agent"));
   
-  if (existingAgents.length > 0) {
+  if (existingAgents.length > 0 && !force) {
     console.log("✅ Database already has agent data. Skipping seed.");
     return;
+  }
+  
+  // If force is true, we'll delete existing agent data first
+  if (force && existingAgents.length > 0) {
+    console.log("🗑️ Force flag set. Removing existing agent data...");
+    
+    // Get all agent user IDs
+    const agentIds = existingAgents.map(agent => agent.id);
+    
+    // Delete agent profiles first (due to foreign key constraints)
+    if (agentIds.length > 0) {
+      // Delete agent profiles linked to these users
+      for (const agentId of agentIds) {
+        await db.delete(agentProfiles).where(eq(agentProfiles.userId, agentId));
+      }
+    }
+    
+    // Delete agent users
+    await db.delete(users).where(eq(users.role, "agent"));
+    
+    console.log("✅ Existing agent data removed.");
   }
 
   // Sample agent data with profiles
@@ -149,7 +170,10 @@ async function seedDatabase() {
 if (import.meta.url.startsWith('file:')) {
   const modulePath = import.meta.url.slice(process.platform === 'win32' ? 8 : 7);
   if (modulePath === process.argv[1]) {
-    seedDatabase()
+    // Check if the force flag is provided
+    const forceFlag = process.argv.includes('--force') || process.argv.includes('-f');
+    
+    seedDatabase(forceFlag)
       .then(() => process.exit(0))
       .catch((error) => {
         console.error("❌ Error seeding database:", error);
