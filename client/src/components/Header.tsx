@@ -109,13 +109,12 @@ const Header = () => {
         </div>
       </header>
 
-      {/* Temporarily removed MobileMenu while debugging
       <MobileMenu 
         isOpen={mobileMenuOpen} 
         onClose={() => setMobileMenuOpen(false)} 
         user={user} 
         onLogout={handleLogout}
-      /> */}
+      />
     </>
   );
 };
