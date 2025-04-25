@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CalendarIcon, Search, MapPin } from 'lucide-react';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,7 @@ const budgetRanges = [
 ];
 
 const SearchForm = () => {
-  const [, navigate] = useNavigate();
+  const [, setLocation] = useLocation();
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
 
   const form = useForm<SearchFormValues>({
@@ -62,7 +62,7 @@ const SearchForm = () => {
       params.append('styles', data.travelStyles.join(','));
     }
 
-    navigate(`/agents?${params.toString()}`);
+    setLocation(`/agents?${params.toString()}`);
   };
 
   return (
