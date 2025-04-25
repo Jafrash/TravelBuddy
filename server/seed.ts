@@ -38,7 +38,7 @@ async function seedDatabase() {
       profile: {
         specialization: "Japan Excursions",
         experience: 8,
-        rating: 4.8,
+        rating: 5, // Rounded from 4.8 to match integer schema
         languages: ["English", "Japanese"],
         regions: ["Japan", "South Korea", "Taiwan"],
         travelStyles: ["Cultural", "Culinary", "Adventure"],
@@ -58,7 +58,7 @@ async function seedDatabase() {
       profile: {
         specialization: "European Hidden Gems",
         experience: 12,
-        rating: 4.9,
+        rating: 5, // Rounded from 4.9 to match integer schema
         languages: ["English", "French", "Italian"],
         regions: ["France", "Italy", "Spain", "Portugal", "Greece"],
         travelStyles: ["Luxury", "Cultural", "Food & Wine"],
@@ -78,7 +78,7 @@ async function seedDatabase() {
       profile: {
         specialization: "African Safaris",
         experience: 7,
-        rating: 4.7,
+        rating: 5, // Rounded from 4.7 to match integer schema
         languages: ["English", "Swahili"],
         regions: ["Kenya", "Tanzania", "South Africa", "Botswana", "Namibia"],
         travelStyles: ["Wildlife", "Adventure", "Photography"],
@@ -98,7 +98,7 @@ async function seedDatabase() {
       profile: {
         specialization: "Caribbean Islands",
         experience: 6,
-        rating: 4.5,
+        rating: 5, // Rounded from 4.5 to match integer schema
         languages: ["English", "Spanish"],
         regions: ["Cuba", "Jamaica", "Dominican Republic", "Bahamas", "Puerto Rico"],
         travelStyles: ["Beach", "Cruise", "All-Inclusive"],
@@ -118,7 +118,7 @@ async function seedDatabase() {
       profile: {
         specialization: "Southeast Asia",
         experience: 9,
-        rating: 4.6,
+        rating: 5, // Rounded from 4.6 to match integer schema
         languages: ["English", "Mandarin", "Thai"],
         regions: ["Thailand", "Vietnam", "Cambodia", "Laos", "Indonesia"],
         travelStyles: ["Backpacking", "Cultural", "Adventure"],
