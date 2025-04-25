@@ -9,6 +9,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
 
+  // Simple health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // API routes
   // Agent profiles
   app.get("/api/agents", async (req, res) => {
