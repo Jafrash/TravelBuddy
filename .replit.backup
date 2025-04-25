@@ -1,0 +1,10 @@
+run = ["node", "backend.js"]
+hidden = [".config", "package-lock.json"]
+entrypoint = "index.js"
+
+[nix]
+channel = "stable-22_11"
+
+[deployment]
+run = ["node", "backend.js"]
+deploymentTarget = "cloudrun"
