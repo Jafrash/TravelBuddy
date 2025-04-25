@@ -9,9 +9,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
 
 // Login form schema
 const loginSchema = z.object({
@@ -31,12 +33,27 @@ const registerSchema = z.object({
     required_error: "Please select a role",
   }),
   bio: z.string().optional(),
+  profilePicture: z.string().optional(),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const AuthPage = () => {
   const [, setLocation] = useLocation();
+  const { user, loginMutation, registerMutation } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === "traveler") {
+        setLocation("/dashboard/traveler");
+      } else if (user.role === "agent") {
+        setLocation("/dashboard/agent");
+      } else {
+        setLocation("/");
+      }
+    }
+  }, [user, setLocation]);
 
   // Login form
   const loginForm = useForm<LoginFormValues>({
@@ -57,27 +74,51 @@ const AuthPage = () => {
       fullName: "",
       role: "traveler",
       bio: "",
+      profilePicture: "https://ui-avatars.com/api/?name=User",
     },
   });
 
   const onLoginSubmit = (data: LoginFormValues) => {
-    // Demo mode - just show toast instead of using loginMutation
-    toast({
-      title: "Login Attempted",
-      description: `User: ${data.username} (demo mode - not connecting to backend)`,
+    loginMutation.mutate(data, {
+      onSuccess: (user) => {
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${user.fullName || user.username}!`,
+        });
+        
+        if (user.role === "traveler") {
+          setLocation("/dashboard/traveler");
+        } else if (user.role === "agent") {
+          setLocation("/dashboard/agent");
+        } else {
+          setLocation("/");
+        }
+      }
     });
-    // Go to test page for now
-    setLocation("/");
   };
 
   const onRegisterSubmit = (data: RegisterFormValues) => {
-    // Demo mode - just show toast instead of using registerMutation
-    toast({
-      title: "Registration Attempted",
-      description: `User: ${data.username}, Role: ${data.role} (demo mode - not connecting to backend)`,
+    // Set a default profile picture if not provided
+    if (!data.profilePicture) {
+      data.profilePicture = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.fullName)}`;
+    }
+    
+    registerMutation.mutate(data, {
+      onSuccess: (user) => {
+        toast({
+          title: "Registration Successful",
+          description: `Welcome to Wanderwise, ${user.fullName || user.username}!`,
+        });
+        
+        if (user.role === "traveler") {
+          setLocation("/dashboard/traveler");
+        } else if (user.role === "agent") {
+          setLocation("/dashboard/agent");
+        } else {
+          setLocation("/");
+        }
+      }
     });
-    // Go to test page for now
-    setLocation("/");
   };
 
   // Function to handle tab switching
@@ -154,8 +195,15 @@ const AuthPage = () => {
                       <Button 
                         type="submit" 
                         className="w-full"
+                        disabled={loginMutation.isPending}
                       >
-                        Login
+                        {loginMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...
+                          </>
+                        ) : (
+                          "Login"
+                        )}
                       </Button>
                     </form>
                   </Form>
@@ -279,8 +327,15 @@ const AuthPage = () => {
                       <Button 
                         type="submit" 
                         className="w-full"
+                        disabled={registerMutation.isPending}
                       >
-                        Register
+                        {registerMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registering...
+                          </>
+                        ) : (
+                          "Register"
+                        )}
                       </Button>
                     </form>
                   </Form>
