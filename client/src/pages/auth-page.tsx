@@ -78,6 +78,21 @@ const AuthPage = () => {
     registerMutation.mutate(data);
   };
 
+  // Function to handle tab switching
+  const handleSwitchToRegister = () => {
+    const registerTab = document.querySelector('[data-value="register"]');
+    if (registerTab && registerTab instanceof HTMLElement) {
+      registerTab.click();
+    }
+  };
+
+  const handleSwitchToLogin = () => {
+    const loginTab = document.querySelector('[data-value="login"]');
+    if (loginTab && loginTab instanceof HTMLElement) {
+      loginTab.click();
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Auth Form Column */}
@@ -146,8 +161,8 @@ const AuthPage = () => {
                 </CardContent>
                 <CardFooter className="flex justify-center">
                   <p className="text-sm text-neutral-dark">
-                    Don't have an account?{" "}
-                    <Button type="button" variant="link" className="p-0" onClick={() => (document.querySelector('[data-value="register"]') as HTMLElement)?.click()}>
+                    Don&apos;t have an account?{" "}
+                    <Button type="button" variant="link" className="p-0" onClick={handleSwitchToRegister}>
                       Register
                     </Button>
                   </p>
@@ -273,7 +288,7 @@ const AuthPage = () => {
                 <CardFooter className="flex justify-center">
                   <p className="text-sm text-neutral-dark">
                     Already have an account?{" "}
-                    <Button type="button" variant="link" className="p-0" onClick={() => document.querySelector('[data-value="login"]')?.click()}>
+                    <Button type="button" variant="link" className="p-0" onClick={handleSwitchToLogin}>
                       Login
                     </Button>
                   </p>
