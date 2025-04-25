@@ -33,41 +33,33 @@ const MobileMenu = ({ isOpen, onClose, user, onLogout }: MobileMenuProps) => {
         <nav className="mb-8">
           <ul className="space-y-4">
             <li>
-              <Link href="/">
-                <a onClick={onClose} className="block py-2 text-lg font-medium text-neutral-dark hover:text-primary transition-colors">
-                  Home
-                </a>
+              <Link href="/" className="block py-2 text-lg font-medium text-neutral-dark hover:text-primary transition-colors" onClick={onClose}>
+                Home
               </Link>
             </li>
             <li>
-              <Link href="/agents">
-                <a onClick={onClose} className="block py-2 text-lg font-medium text-neutral-dark hover:text-primary transition-colors">
-                  Find Agents
-                </a>
+              <Link href="/agents" className="block py-2 text-lg font-medium text-neutral-dark hover:text-primary transition-colors" onClick={onClose}>
+                Find Agents
               </Link>
             </li>
             {user && (
               <>
                 <li>
-                  <Link href={getDashboardLink()}>
-                    <a onClick={onClose} className="block py-2 text-lg font-medium text-neutral-dark hover:text-primary transition-colors">
-                      Dashboard
-                    </a>
+                  <Link href={getDashboardLink()} className="block py-2 text-lg font-medium text-neutral-dark hover:text-primary transition-colors" onClick={onClose}>
+                    Dashboard
                   </Link>
                 </li>
                 <li>
-                  <Link href="/messages">
-                    <a onClick={onClose} className="block py-2 text-lg font-medium text-neutral-dark hover:text-primary transition-colors">
-                      Messages
-                    </a>
+                  <Link href="/messages" className="block py-2 text-lg font-medium text-neutral-dark hover:text-primary transition-colors" onClick={onClose}>
+                    Messages
                   </Link>
                 </li>
               </>
             )}
             <li>
-              <a href="#" className="block py-2 text-lg font-medium text-neutral-dark hover:text-primary transition-colors">
+              <span className="block py-2 text-lg font-medium text-neutral-dark hover:text-primary transition-colors cursor-pointer">
                 About Us
-              </a>
+              </span>
             </li>
           </ul>
         </nav>

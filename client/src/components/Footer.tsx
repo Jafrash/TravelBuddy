@@ -16,18 +16,18 @@ const Footer = () => {
               Connecting travelers with expert travel agents to create personalized, unforgettable travel experiences.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-white hover:text-accent transition-colors">
+              <span className="text-white hover:text-accent transition-colors cursor-pointer">
                 <Facebook size={20} />
-              </a>
-              <a href="#" className="text-white hover:text-accent transition-colors">
+              </span>
+              <span className="text-white hover:text-accent transition-colors cursor-pointer">
                 <Twitter size={20} />
-              </a>
-              <a href="#" className="text-white hover:text-accent transition-colors">
+              </span>
+              <span className="text-white hover:text-accent transition-colors cursor-pointer">
                 <Instagram size={20} />
-              </a>
-              <a href="#" className="text-white hover:text-accent transition-colors">
+              </span>
+              <span className="text-white hover:text-accent transition-colors cursor-pointer">
                 <Compass size={20} />
-              </a>
+              </span>
             </div>
           </div>
           
@@ -46,13 +46,13 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">Browse Destinations</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">Browse Destinations</span>
               </li>
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">Travel Inspiration</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">Travel Inspiration</span>
               </li>
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">Customer Reviews</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">Customer Reviews</span>
               </li>
             </ul>
           </div>
@@ -72,13 +72,13 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">Resources</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">Resources</span>
               </li>
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">Success Stories</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">Success Stories</span>
               </li>
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">Agent FAQ</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">Agent FAQ</span>
               </li>
             </ul>
           </div>
@@ -88,19 +88,19 @@ const Footer = () => {
             <h3 className="font-heading font-semibold text-lg mb-4">Company</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">About Us</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">About Us</span>
               </li>
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">Careers</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">Careers</span>
               </li>
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">Press</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">Press</span>
               </li>
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">Privacy Policy</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">Privacy Policy</span>
               </li>
               <li>
-                <a href="#" className="text-neutral-medium hover:text-white transition-colors">Terms of Service</a>
+                <span className="text-neutral-medium hover:text-white transition-colors cursor-pointer">Terms of Service</span>
               </li>
             </ul>
           </div>

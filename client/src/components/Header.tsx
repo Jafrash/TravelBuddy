@@ -72,7 +72,7 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <div className="flex items-center gap-4">
-                <Link href={getDashboardLink()}>
+                <Link href={getDashboardLink()} className="block">
                   <Avatar>
                     {user.profilePicture ? (
                       <AvatarImage src={user.profilePicture} alt={user.fullName} />
@@ -87,10 +87,10 @@ const Header = () => {
               </div>
             ) : (
               <>
-                <Link href="/auth">
-                  <Button variant="outline" className="hidden md:inline-flex">Log In</Button>
+                <Link href="/auth" className="hidden md:inline-flex">
+                  <Button variant="outline">Log In</Button>
                 </Link>
-                <Link href="/auth">
+                <Link href="/auth" className="inline-flex">
                   <Button>Sign Up</Button>
                 </Link>
               </>
