@@ -21,6 +21,7 @@ export default function FullLayoutTestPage() {
             <Button onClick={() => navigate("/")}>This Page</Button>
             <Button onClick={() => navigate("/notfound")}>Not Found Page</Button>
             <Button onClick={() => navigate("/auth")}>Auth Page</Button>
+            <Button onClick={() => navigate("/footer-test")}>Footer Test Page</Button>
           </div>
         </div>
           
