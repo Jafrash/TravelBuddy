@@ -17,14 +17,14 @@ type AgentWithProfile = AgentProfile & User;
 const AgentsPage = () => {
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBudget, setSelectedBudget] = useState("");
+  const [selectedBudget, setSelectedBudget] = useState("any");
   const [filteredAgents, setFilteredAgents] = useState<AgentWithProfile[]>([]);
   
   // Get search params from URL
   const search = useSearch();
   const params = new URLSearchParams(search);
   const urlDestination = params.get("destination") || "";
-  const urlBudget = params.get("budget") || "";
+  const urlBudget = params.get("budget") || "any";
   
   // Fetch all agents
   const { data: agents, isLoading, isError } = useQuery<AgentWithProfile[]>({
@@ -69,7 +69,7 @@ const AgentsPage = () => {
     
     // Filter by budget (this would be more meaningful with actual budget data)
     // For now, just simulate filtering
-    if (selectedBudget) {
+    if (selectedBudget && selectedBudget !== "any") {
       // Just a placeholder logic - in a real app, this would filter based on agent's price range
       filtered = filtered.filter(agent => {
         if (selectedBudget === "budget") return agent.experience <= 3;
@@ -85,7 +85,7 @@ const AgentsPage = () => {
   const clearFilters = () => {
     setSearchQuery("");
     setSelectedStyles([]);
-    setSelectedBudget("");
+    setSelectedBudget("any");
   };
   
   return (
@@ -138,7 +138,7 @@ const AgentsPage = () => {
                     <SelectValue placeholder="Any budget" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any budget</SelectItem>
+                    <SelectItem value="any">Any budget</SelectItem>
                     {budgetRanges.map((range) => (
                       <SelectItem key={range.value} value={range.value}>
                         {range.label}
@@ -151,7 +151,7 @@ const AgentsPage = () => {
                 variant="outline"
                 onClick={clearFilters}
                 className="w-full md:w-auto"
-                disabled={!searchQuery && !selectedStyles.length && !selectedBudget}
+                disabled={!searchQuery && !selectedStyles.length && selectedBudget === "any"}
               >
                 Clear Filters
               </Button>
