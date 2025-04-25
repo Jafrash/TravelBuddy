@@ -1,8 +1,10 @@
-import { users, type User, type InsertUser, AgentProfile, InsertAgentProfile, TripPreference, InsertTripPreference, Itinerary, InsertItinerary, Message, InsertMessage, Review, InsertReview } from "@shared/schema";
+import { users, agentProfiles, tripPreferences, itineraries, messages, reviews, type User, type InsertUser, AgentProfile, InsertAgentProfile, TripPreference, InsertTripPreference, Itinerary, InsertItinerary, Message, InsertMessage, Review, InsertReview } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { db, pool } from "./db";
+import { eq, and, or, desc } from "drizzle-orm";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 // modify the interface with any CRUD methods
 // you might need
@@ -37,234 +39,291 @@ export interface IStorage {
   createReview(review: InsertReview): Promise<Review>;
   getReviewsByAgentId(agentId: number): Promise<(Review & { traveler: Pick<User, 'fullName' | 'profilePicture'> })[]>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private agentProfiles: Map<number, AgentProfile>;
-  private tripPreferences: Map<number, TripPreference>;
-  private itineraries: Map<number, Itinerary>;
-  private messages: Map<number, Message>;
-  private reviews: Map<number, Review>;
-  
-  userCurrentId: number;
-  agentProfileCurrentId: number;
-  tripPreferenceCurrentId: number;
-  itineraryCurrentId: number;
-  messageCurrentId: number;
-  reviewCurrentId: number;
-  sessionStore: session.SessionStore;
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.agentProfiles = new Map();
-    this.tripPreferences = new Map();
-    this.itineraries = new Map();
-    this.messages = new Map();
-    this.reviews = new Map();
-    
-    this.userCurrentId = 1;
-    this.agentProfileCurrentId = 1;
-    this.tripPreferenceCurrentId = 1;
-    this.itineraryCurrentId = 1;
-    this.messageCurrentId = 1;
-    this.reviewCurrentId = 1;
-    
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
     });
-    
-    // Add some initial data for demo purposes
-    this.initializeData();
-  }
-  
-  private initializeData() {
-    // This will run after the database is ready to provide some initial data
-    // Implementing this is optional
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error("Error retrieving user:", error);
+      return undefined;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    try {
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      return user;
+    } catch (error) {
+      console.error("Error retrieving user by username:", error);
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userCurrentId++;
-    const createdAt = new Date();
-    const user: User = { ...insertUser, id, createdAt };
-    this.users.set(id, user);
-    return user;
+    try {
+      const [user] = await db.insert(users).values(insertUser).returning();
+      return user;
+    } catch (error) {
+      console.error("Error creating user:", error);
+      throw error;
+    }
   }
   
   // Agent profiles
   async getAgents(): Promise<(AgentProfile & User)[]> {
-    const agents = Array.from(this.agentProfiles.values());
-    return Promise.all(
-      agents.map(async (profile) => {
-        const user = await this.getUser(profile.userId);
-        if (!user) throw new Error("User not found");
-        return { ...profile, ...user };
-      })
-    );
+    try {
+      const agentProfilesData = await db.select().from(agentProfiles);
+      
+      const agentsWithProfiles = await Promise.all(
+        agentProfilesData.map(async (profile) => {
+          const [user] = await db.select().from(users).where(eq(users.id, profile.userId));
+          if (!user) throw new Error(`User not found for agent profile ID: ${profile.id}`);
+          return { ...profile, ...user };
+        })
+      );
+      
+      return agentsWithProfiles;
+    } catch (error) {
+      console.error("Error retrieving agents:", error);
+      return [];
+    }
   }
 
   async getAgentById(id: number): Promise<(AgentProfile & User) | undefined> {
-    const agentProfile = Array.from(this.agentProfiles.values()).find(
-      (profile) => profile.userId === id
-    );
-    
-    if (!agentProfile) return undefined;
-    
-    const user = await this.getUser(agentProfile.userId);
-    if (!user) return undefined;
-    
-    return { ...agentProfile, ...user };
+    try {
+      const [agentProfile] = await db.select().from(agentProfiles).where(eq(agentProfiles.userId, id));
+      
+      if (!agentProfile) return undefined;
+      
+      const [user] = await db.select().from(users).where(eq(users.id, agentProfile.userId));
+      if (!user) return undefined;
+      
+      return { ...agentProfile, ...user };
+    } catch (error) {
+      console.error("Error retrieving agent by ID:", error);
+      return undefined;
+    }
   }
 
   async createAgentProfile(profile: InsertAgentProfile): Promise<AgentProfile> {
-    const id = this.agentProfileCurrentId++;
-    const agentProfile: AgentProfile = { ...profile, id };
-    this.agentProfiles.set(id, agentProfile);
-    return agentProfile;
+    try {
+      const [agentProfile] = await db.insert(agentProfiles).values(profile).returning();
+      return agentProfile;
+    } catch (error) {
+      console.error("Error creating agent profile:", error);
+      throw error;
+    }
   }
   
   async updateAgentRating(agentId: number): Promise<void> {
-    const reviews = Array.from(this.reviews.values()).filter(
-      (review) => review.agentId === agentId
-    );
-    
-    if (reviews.length === 0) return;
-    
-    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
-    const averageRating = Math.round(totalRating / reviews.length);
-    
-    const agentProfile = Array.from(this.agentProfiles.values()).find(
-      (profile) => profile.userId === agentId
-    );
-    
-    if (agentProfile) {
-      const updatedProfile = { 
-        ...agentProfile, 
-        rating: averageRating,
-        reviewCount: reviews.length
-      };
-      this.agentProfiles.set(agentProfile.id, updatedProfile);
+    try {
+      const reviewsData = await db.select().from(reviews).where(eq(reviews.agentId, agentId));
+      
+      if (reviewsData.length === 0) return;
+      
+      const totalRating = reviewsData.reduce((sum, review) => sum + review.rating, 0);
+      const averageRating = Math.round(totalRating / reviewsData.length);
+      
+      const [agentProfile] = await db.select().from(agentProfiles).where(eq(agentProfiles.userId, agentId));
+      
+      if (agentProfile) {
+        await db.update(agentProfiles)
+          .set({ 
+            rating: averageRating,
+            reviewCount: reviewsData.length
+          })
+          .where(eq(agentProfiles.userId, agentId));
+      }
+    } catch (error) {
+      console.error("Error updating agent rating:", error);
+      throw error;
     }
   }
   
   // Trip preferences
   async createTripPreference(preference: InsertTripPreference): Promise<TripPreference> {
-    const id = this.tripPreferenceCurrentId++;
-    const createdAt = new Date();
-    const tripPreference: TripPreference = { ...preference, id, createdAt };
-    this.tripPreferences.set(id, tripPreference);
-    return tripPreference;
+    try {
+      const [tripPreference] = await db.insert(tripPreferences).values(preference).returning();
+      return tripPreference;
+    } catch (error) {
+      console.error("Error creating trip preference:", error);
+      throw error;
+    }
   }
 
   async getTripPreferencesByTravelerId(travelerId: number): Promise<TripPreference[]> {
-    return Array.from(this.tripPreferences.values()).filter(
-      (preference) => preference.travelerId === travelerId
-    );
+    try {
+      return await db.select().from(tripPreferences).where(eq(tripPreferences.travelerId, travelerId));
+    } catch (error) {
+      console.error("Error retrieving trip preferences by traveler ID:", error);
+      return [];
+    }
   }
 
   async getAllTripPreferences(): Promise<TripPreference[]> {
-    return Array.from(this.tripPreferences.values());
+    try {
+      return await db.select().from(tripPreferences);
+    } catch (error) {
+      console.error("Error retrieving all trip preferences:", error);
+      return [];
+    }
   }
   
   // Itineraries
   async createItinerary(itinerary: InsertItinerary): Promise<Itinerary> {
-    const id = this.itineraryCurrentId++;
-    const createdAt = new Date();
-    const updatedAt = new Date();
-    const newItinerary: Itinerary = { ...itinerary, id, createdAt, updatedAt };
-    this.itineraries.set(id, newItinerary);
-    return newItinerary;
+    try {
+      const [newItinerary] = await db.insert(itineraries).values(itinerary).returning();
+      return newItinerary;
+    } catch (error) {
+      console.error("Error creating itinerary:", error);
+      throw error;
+    }
   }
 
   async getItineraryById(id: number): Promise<Itinerary | undefined> {
-    return this.itineraries.get(id);
+    try {
+      const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.id, id));
+      return itinerary;
+    } catch (error) {
+      console.error("Error retrieving itinerary by ID:", error);
+      return undefined;
+    }
   }
 
   async getItinerariesByTravelerId(travelerId: number): Promise<Itinerary[]> {
-    return Array.from(this.itineraries.values()).filter(
-      (itinerary) => itinerary.travelerId === travelerId
-    );
+    try {
+      return await db.select().from(itineraries).where(eq(itineraries.travelerId, travelerId));
+    } catch (error) {
+      console.error("Error retrieving itineraries by traveler ID:", error);
+      return [];
+    }
   }
 
   async getItinerariesByAgentId(agentId: number): Promise<Itinerary[]> {
-    return Array.from(this.itineraries.values()).filter(
-      (itinerary) => itinerary.agentId === agentId
-    );
+    try {
+      return await db.select().from(itineraries).where(eq(itineraries.agentId, agentId));
+    } catch (error) {
+      console.error("Error retrieving itineraries by agent ID:", error);
+      return [];
+    }
   }
 
   async updateItinerary(id: number, data: Partial<Itinerary>): Promise<Itinerary> {
-    const itinerary = this.itineraries.get(id);
-    if (!itinerary) {
-      throw new Error("Itinerary not found");
+    try {
+      const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.id, id));
+      
+      if (!itinerary) {
+        throw new Error("Itinerary not found");
+      }
+      
+      const updatedData = { 
+        ...data,
+        updatedAt: new Date()
+      };
+      
+      const [updatedItinerary] = await db.update(itineraries)
+        .set(updatedData)
+        .where(eq(itineraries.id, id))
+        .returning();
+      
+      return updatedItinerary;
+    } catch (error) {
+      console.error("Error updating itinerary:", error);
+      throw error;
     }
-    
-    const updatedItinerary = { 
-      ...itinerary, 
-      ...data,
-      updatedAt: new Date()
-    };
-    
-    this.itineraries.set(id, updatedItinerary);
-    return updatedItinerary;
   }
   
   // Messages
   async createMessage(message: InsertMessage): Promise<Message> {
-    const id = this.messageCurrentId++;
-    const sentAt = new Date();
-    const newMessage: Message = { ...message, id, sentAt };
-    this.messages.set(id, newMessage);
-    return newMessage;
+    try {
+      const [newMessage] = await db.insert(messages).values(message).returning();
+      return newMessage;
+    } catch (error) {
+      console.error("Error creating message:", error);
+      throw error;
+    }
   }
 
   async getMessagesByUserId(userId: number, receiverId?: number): Promise<Message[]> {
-    return Array.from(this.messages.values()).filter((message) => {
+    try {
       if (receiverId) {
-        return (message.senderId === userId && message.receiverId === receiverId) ||
-               (message.senderId === receiverId && message.receiverId === userId);
+        return await db.select()
+          .from(messages)
+          .where(
+            or(
+              and(
+                eq(messages.senderId, userId),
+                eq(messages.receiverId, receiverId)
+              ),
+              and(
+                eq(messages.senderId, receiverId),
+                eq(messages.receiverId, userId)
+              )
+            )
+          )
+          .orderBy(messages.sentAt);
       }
-      return message.senderId === userId || message.receiverId === userId;
-    }).sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime());
+      
+      return await db.select()
+        .from(messages)
+        .where(
+          or(
+            eq(messages.senderId, userId),
+            eq(messages.receiverId, userId)
+          )
+        )
+        .orderBy(messages.sentAt);
+    } catch (error) {
+      console.error("Error retrieving messages by user ID:", error);
+      return [];
+    }
   }
   
   // Reviews
   async createReview(review: InsertReview): Promise<Review> {
-    const id = this.reviewCurrentId++;
-    const createdAt = new Date();
-    const newReview: Review = { ...review, id, createdAt };
-    this.reviews.set(id, newReview);
-    return newReview;
+    try {
+      const [newReview] = await db.insert(reviews).values(review).returning();
+      return newReview;
+    } catch (error) {
+      console.error("Error creating review:", error);
+      throw error;
+    }
   }
 
   async getReviewsByAgentId(agentId: number): Promise<(Review & { traveler: Pick<User, 'fullName' | 'profilePicture'> })[]> {
-    const reviews = Array.from(this.reviews.values()).filter(
-      (review) => review.agentId === agentId
-    );
-    
-    return Promise.all(
-      reviews.map(async (review) => {
-        const traveler = await this.getUser(review.travelerId);
-        return {
-          ...review,
-          traveler: {
-            fullName: traveler?.fullName || "Unknown User",
-            profilePicture: traveler?.profilePicture || ""
-          }
-        };
-      })
-    );
+    try {
+      const reviewsData = await db.select().from(reviews).where(eq(reviews.agentId, agentId));
+      
+      return await Promise.all(
+        reviewsData.map(async (review) => {
+          const [traveler] = await db.select().from(users).where(eq(users.id, review.travelerId));
+          return {
+            ...review,
+            traveler: {
+              fullName: traveler?.fullName || "Unknown User",
+              profilePicture: traveler?.profilePicture || ""
+            }
+          };
+        })
+      );
+    } catch (error) {
+      console.error("Error retrieving reviews by agent ID:", error);
+      return [];
+    }
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
