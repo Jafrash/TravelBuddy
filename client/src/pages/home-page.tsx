@@ -6,8 +6,12 @@ import { GlobeIcon, Compass, Users, Sparkles, Users2, CalendarClock, MapPin, Sta
 import { useQuery } from "@tanstack/react-query";
 import SearchForm from "@/components/SearchForm";
 import { AgentProfile, User } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 const HomePage = () => {
+  // Get user authentication status
+  const { user } = useAuth();
+  
   // Fetch featured agents
   const { data: agents } = useQuery<(AgentProfile & User)[]>({
     queryKey: ['/api/agents'],
@@ -59,11 +63,13 @@ const HomePage = () => {
                     Find Travel Agents
                   </Button>
                 </Link>
-                <Link href="/auth">
-                  <Button size="lg" variant="outline" className="px-8 font-medium">
-                    Create Account
-                  </Button>
-                </Link>
+                {!user && (
+                  <Link href="/auth">
+                    <Button size="lg" variant="outline" className="px-8 font-medium">
+                      Log In / Sign Up
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -227,11 +233,13 @@ const HomePage = () => {
               Join TravelBuddy today and connect with expert travel agents who will create your perfect itinerary.
             </p>
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <Link href="/auth">
-                <Button size="lg" className="px-8 font-medium bg-white text-blue-600 hover:bg-gray-100">
-                  Get Started
-                </Button>
-              </Link>
+              {!user && (
+                <Link href="/auth">
+                  <Button size="lg" className="px-8 font-medium bg-white text-blue-600 hover:bg-gray-100">
+                    Get Started
+                  </Button>
+                </Link>
+              )}
               <Link href="/agents">
                 <Button size="lg" variant="outline" className="px-8 font-medium border-white text-white hover:bg-blue-700">
                   Browse Agents
