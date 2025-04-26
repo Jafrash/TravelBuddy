@@ -53,9 +53,12 @@ const Header = () => {
             <Link href="/" className={`font-medium ${location === "/" ? "text-primary" : "text-neutral-dark hover:text-primary"} transition-colors`}>
               Home
             </Link>
-            <Link href="/agents" className={`font-medium ${location === "/agents" ? "text-primary" : "text-neutral-dark hover:text-primary"} transition-colors`}>
-              Find Agents
-            </Link>
+            {/* Only show "Find Agents" link for travelers or non-logged in users */}
+            {(!user || user.role === "traveler") && (
+              <Link href="/agents" className={`font-medium ${location === "/agents" ? "text-primary" : "text-neutral-dark hover:text-primary"} transition-colors`}>
+                Find Agents
+              </Link>
+            )}
             {user && (
               <>
                 <Link href={getDashboardLink()} className={`font-medium ${location.startsWith("/dashboard") ? "text-primary" : "text-neutral-dark hover:text-primary"} transition-colors`}>
