@@ -80,7 +80,7 @@ export default function AgentDashboardPage() {
     return <Redirect to="/auth" />;
   }
 
-  // Mock data for demonstration purposes
+  // Mock data for demonstration purposes (remaining unchanged)
   const recentBookings = [
     {
       id: 1,
@@ -175,823 +175,712 @@ export default function AgentDashboardPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-grow bg-neutral-light">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Agent Dashboard</h1>
-              <p className="text-neutral-dark">
-                Manage your bookings, clients, and travel packages
-              </p>
-            </div>
-            <div className="mt-4 md:mt-0 flex gap-3">
-              <Link href="/messages">
-                <Button variant="outline" className="relative">
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Messages
-                  {unreadMessagesCount > 0 && (
-                    <Badge className="absolute -top-2 -right-2 bg-primary text-white">
-                      {unreadMessagesCount}
-                    </Badge>
-                  )}
-                </Button>
-              </Link>
-              <Link href="/itinerary/new">
-                <Button>
-                  <Plus className="mr-2 h-5 w-5" />
-                  New Itinerary
-                </Button>
-              </Link>
-            </div>
-          </div>
+      <main className="flex-grow container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">Agent Dashboard</h1>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Sidebar Navigation */}
-            <div className="lg:col-span-1">
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="clients">Clients</TabsTrigger>
+            <TabsTrigger value="packages">Packages</TabsTrigger>
+            <TabsTrigger value="itineraries">Itineraries</TabsTrigger>
+            <TabsTrigger value="messages">Messages</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="payments">Payments</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Statistics Cards */}
               <Card>
-                <CardContent className="p-0">
-                  <nav className="flex flex-col">
-                    <Button
-                      variant={activeTab === "overview" ? "default" : "ghost"}
-                      className="justify-start rounded-none h-14"
-                      onClick={() => setActiveTab("overview")}
-                    >
-                      <BarChart3 className="mr-3 h-5 w-5" />
-                      Overview
-                    </Button>
-                    <Button
-                      variant={activeTab === "bookings" ? "default" : "ghost"}
-                      className="justify-start rounded-none h-14"
-                      onClick={() => setActiveTab("bookings")}
-                    >
-                      <CalendarDays className="mr-3 h-5 w-5" />
-                      Manage Bookings
-                    </Button>
-                    <Button
-                      variant={activeTab === "clients" ? "default" : "ghost"}
-                      className="justify-start rounded-none h-14"
-                      onClick={() => setActiveTab("clients")}
-                    >
-                      <Users className="mr-3 h-5 w-5" />
-                      Client List
-                    </Button>
-                    <Button
-                      variant={activeTab === "packages" ? "default" : "ghost"}
-                      className="justify-start rounded-none h-14"
-                      onClick={() => setActiveTab("packages")}
-                    >
-                      <Package className="mr-3 h-5 w-5" />
-                      Package Creation
-                    </Button>
-                    <Button
-                      variant={activeTab === "itineraries" ? "default" : "ghost"}
-                      className="justify-start rounded-none h-14"
-                      onClick={() => setActiveTab("itineraries")}
-                    >
-                      <FileEdit className="mr-3 h-5 w-5" />
-                      Itinerary Builder
-                    </Button>
-                    <Button
-                      variant={activeTab === "messages" ? "default" : "ghost"}
-                      className="justify-start rounded-none h-14"
-                      onClick={() => setActiveTab("messages")}
-                    >
-                      <MessageCircle className="mr-3 h-5 w-5" />
-                      Client Communication
-                    </Button>
-                    <Button
-                      variant={activeTab === "analytics" ? "default" : "ghost"}
-                      className="justify-start rounded-none h-14"
-                      onClick={() => setActiveTab("analytics")}
-                    >
-                      <BarChart3 className="mr-3 h-5 w-5" />
-                      Reports & Analytics
-                    </Button>
-                    <Button
-                      variant={activeTab === "payments" ? "default" : "ghost"}
-                      className="justify-start rounded-none h-14"
-                      onClick={() => setActiveTab("payments")}
-                    >
-                      <CreditCard className="mr-3 h-5 w-5" />
-                      Payments Tracking
-                    </Button>
-                  </nav>
-                </CardContent>
-              </Card>
-
-              <Card className="mt-6">
-                <CardHeader className="pb-3">
-                  <CardTitle>Calendar</CardTitle>
-                  <CardDescription>
-                    Upcoming bookings and deadlines
-                  </CardDescription>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Total Bookings
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="rounded-md border"
-                  />
+                  <div className="text-3xl font-bold">{recentBookings.length}</div>
+                  <p className="text-xs text-neutral-dark mt-1">
+                    3 new in last 30 days
+                  </p>
+                  <Progress value={75} className="h-1 mt-3" />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Revenue
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">${revenueData.total}</div>
+                  <p className="text-xs text-neutral-dark mt-1">
+                    +17% from last month
+                  </p>
+                  <Progress value={65} className="h-1 mt-3" />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Active Clients
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">12</div>
+                  <p className="text-xs text-neutral-dark mt-1">
+                    5 new inquiries
+                  </p>
+                  <Progress value={85} className="h-1 mt-3" />
                 </CardContent>
               </Card>
             </div>
 
-            {/* Main Content Area */}
-            <div className="lg:col-span-3">
-              <TabsContent value="overview" className="mt-0 space-y-6" forceMount={activeTab === "overview"}>
-                {/* Statistics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Total Bookings
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">{recentBookings.length}</div>
-                      <p className="text-xs text-neutral-dark mt-1">
-                        3 new in last 30 days
-                      </p>
-                      <Progress value={75} className="h-1 mt-3" />
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Revenue
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">${revenueData.total}</div>
-                      <p className="text-xs text-neutral-dark mt-1">
-                        +17% from last month
-                      </p>
-                      <Progress value={65} className="h-1 mt-3" />
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Active Clients
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">12</div>
-                      <p className="text-xs text-neutral-dark mt-1">
-                        5 new inquiries
-                      </p>
-                      <Progress value={85} className="h-1 mt-3" />
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Recent Bookings */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Bookings</CardTitle>
-                    <CardDescription>
-                      Your latest travel bookings and their status
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left pb-3 font-medium">Client</th>
-                            <th className="text-left pb-3 font-medium">Destination</th>
-                            <th className="text-left pb-3 font-medium">Date</th>
-                            <th className="text-left pb-3 font-medium">Status</th>
-                            <th className="text-left pb-3 font-medium">Amount</th>
-                            <th className="text-right pb-3 font-medium">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {recentBookings.map((booking) => (
-                            <tr key={booking.id} className="border-b last:border-0">
-                              <td className="py-3">{booking.travelerName}</td>
-                              <td className="py-3">{booking.destination}</td>
-                              <td className="py-3">
-                                {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
-                              </td>
-                              <td className="py-3">
-                                <Badge
-                                  variant={
-                                    booking.status === "Confirmed"
-                                      ? "success"
-                                      : "warning"
-                                  }
-                                >
-                                  {booking.status}
-                                </Badge>
-                              </td>
-                              <td className="py-3">${booking.amount}</td>
-                              <td className="py-3 text-right">
-                                <Button variant="ghost" size="icon">
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Upcoming Tasks */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Upcoming Tasks</CardTitle>
-                    <CardDescription>
-                      Tasks and deadlines that require your attention
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {upcomingTasks.map((task) => (
-                        <div
-                          key={task.id}
-                          className="flex items-start justify-between p-3 bg-background rounded-lg"
-                        >
-                          <div className="flex items-start">
-                            <div
-                              className={`w-2 h-2 rounded-full mt-2 mr-3 ${
-                                task.priority === "High"
-                                  ? "bg-red-500"
-                                  : "bg-yellow-500"
-                              }`}
-                            ></div>
-                            <div>
-                              <p className="font-medium">{task.title}</p>
-                              <div className="flex items-center mt-1 text-sm text-neutral-dark">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Due: {new Date(task.dueDate).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm">
-                            Complete
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="bookings" className="mt-0 space-y-6" forceMount={activeTab === "bookings"}>
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>Manage Bookings</CardTitle>
-                      <Button>
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Booking
-                      </Button>
-                    </div>
-                    <CardDescription>
-                      Add, modify, or cancel client bookings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center space-x-2">
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-dark" />
-                          <input
-                            type="text"
-                            placeholder="Search bookings..."
-                            className="pl-9 pr-4 py-2 border rounded-md w-64"
-                          />
-                        </div>
-                        <Button variant="outline" size="sm">
-                          <Filter className="mr-2 h-4 w-4" />
-                          Filter
-                        </Button>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm">
-                          Export
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Print
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left pb-3 font-medium">ID</th>
-                            <th className="text-left pb-3 font-medium">Client</th>
-                            <th className="text-left pb-3 font-medium">Destination</th>
-                            <th className="text-left pb-3 font-medium">Travel Dates</th>
-                            <th className="text-left pb-3 font-medium">Status</th>
-                            <th className="text-left pb-3 font-medium">Payment</th>
-                            <th className="text-right pb-3 font-medium">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {recentBookings.map((booking) => (
-                            <tr key={booking.id} className="border-b last:border-0">
-                              <td className="py-3">#{booking.id}</td>
-                              <td className="py-3">{booking.travelerName}</td>
-                              <td className="py-3">{booking.destination}</td>
-                              <td className="py-3">
-                                {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
-                              </td>
-                              <td className="py-3">
-                                <Badge
-                                  variant={
-                                    booking.status === "Confirmed"
-                                      ? "success"
-                                      : "warning"
-                                  }
-                                >
-                                  {booking.status}
-                                </Badge>
-                              </td>
-                              <td className="py-3">${booking.amount}</td>
-                              <td className="py-3 text-right">
-                                <div className="flex items-center justify-end space-x-2">
-                                  <Button variant="ghost" size="icon">
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="clients" className="mt-0 space-y-6" forceMount={activeTab === "clients"}>
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>Client List</CardTitle>
-                      <Button>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Client
-                      </Button>
-                    </div>
-                    <CardDescription>
-                      Access traveller details, preferences, and travel history
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center space-x-2">
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-dark" />
-                          <input
-                            type="text"
-                            placeholder="Search clients..."
-                            className="pl-9 pr-4 py-2 border rounded-md w-64"
-                          />
-                        </div>
-                        <Button variant="outline" size="sm">
-                          <Filter className="mr-2 h-4 w-4" />
-                          Filter
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Recent Bookings */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Bookings</CardTitle>
+                <CardDescription>
+                  Your latest travel bookings and their status
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left pb-3 font-medium">Client</th>
+                        <th className="text-left pb-3 font-medium">Destination</th>
+                        <th className="text-left pb-3 font-medium">Date</th>
+                        <th className="text-left pb-3 font-medium">Status</th>
+                        <th className="text-left pb-3 font-medium">Amount</th>
+                        <th className="text-right pb-3 font-medium">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
                       {recentBookings.map((booking) => (
-                        <Card key={booking.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center mb-4 mt-2">
-                              <Avatar className="h-12 w-12 mr-4">
-                                <AvatarFallback>
-                                  {booking.travelerName
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <h3 className="font-medium">{booking.travelerName}</h3>
-                                <p className="text-sm text-neutral-dark">
-                                  Client since 2023
-                                </p>
-                              </div>
-                            </div>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-neutral-dark">Email:</span>
-                                <span>client{booking.id}@example.com</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-neutral-dark">Phone:</span>
-                                <span>+1 (555) 123-45{booking.id}8</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-neutral-dark">Last Trip:</span>
-                                <span>{booking.destination}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-neutral-dark">Total Trips:</span>
-                                <span>{booking.id + 1}</span>
-                              </div>
-                            </div>
-                            <div className="flex justify-between mt-4">
-                              <Link href={`/client/${booking.id}`}>
-                                <Button variant="outline" size="sm">
-                                  View Profile
-                                </Button>
-                              </Link>
-                              <Link href={`/messages?userId=${booking.id}`}>
-                                <Button size="sm">
-                                  <MessageCircle className="h-4 w-4 mr-1" />
-                                  Message
-                                </Button>
-                              </Link>
-                            </div>
-                          </CardContent>
-                        </Card>
+                        <tr key={booking.id} className="border-b last:border-0">
+                          <td className="py-3">{booking.travelerName}</td>
+                          <td className="py-3">{booking.destination}</td>
+                          <td className="py-3">
+                            {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                          </td>
+                          <td className="py-3">
+                            <Badge
+                              variant={
+                                booking.status === "Confirmed"
+                                  ? "success"
+                                  : "warning"
+                              }
+                            >
+                              {booking.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3">${booking.amount}</td>
+                          <td className="py-3 text-right">
+                            <Button variant="ghost" size="icon">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
                       ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
 
-              <TabsContent value="packages" className="mt-0 space-y-6" forceMount={activeTab === "packages"}>
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>Package Creation</CardTitle>
-                      <Button>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Package
+            {/* Upcoming Tasks */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Upcoming Tasks</CardTitle>
+                <CardDescription>
+                  Tasks and deadlines that require your attention
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {upcomingTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-start justify-between p-3 bg-background rounded-lg"
+                    >
+                      <div className="flex items-start">
+                        <div
+                          className={`w-2 h-2 rounded-full mt-2 mr-3 ${
+                            task.priority === "High"
+                              ? "bg-red-500"
+                              : "bg-yellow-500"
+                          }`}
+                        ></div>
+                        <div>
+                          <p className="font-medium">{task.title}</p>
+                          <div className="flex items-center mt-1 text-sm text-neutral-dark">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Due: {new Date(task.dueDate).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Complete
                       </Button>
                     </div>
-                    <CardDescription>
-                      Create and customize travel packages for your clients
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {travelPackages.map((pkg) => (
-                        <Card key={pkg.id}>
-                          <CardContent className="p-0">
-                            <div className="relative h-40 bg-primary/10">
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <Package className="h-16 w-16 text-primary" />
-                              </div>
-                              <div className="absolute top-3 right-3">
-                                <Badge>
-                                  {pkg.bookings} booking{pkg.bookings !== 1 && "s"}
-                                </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="bookings" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Manage Bookings</CardTitle>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Booking
+                  </Button>
+                </div>
+                <CardDescription>
+                  Add, modify, or cancel client bookings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-dark" />
+                      <input
+                        type="text"
+                        placeholder="Search bookings..."
+                        className="pl-9 pr-4 py-2 border rounded-md w-64"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Filter className="mr-2 h-4 w-4" />
+                      Filter
+                    </Button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm">
+                      Export
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      Print
+                    </Button>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left pb-3 font-medium">ID</th>
+                        <th className="text-left pb-3 font-medium">Client</th>
+                        <th className="text-left pb-3 font-medium">Destination</th>
+                        <th className="text-left pb-3 font-medium">Travel Dates</th>
+                        <th className="text-left pb-3 font-medium">Status</th>
+                        <th className="text-left pb-3 font-medium">Payment</th>
+                        <th className="text-right pb-3 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentBookings.map((booking) => (
+                        <tr key={booking.id} className="border-b last:border-0">
+                          <td className="py-3">#{booking.id}</td>
+                          <td className="py-3">{booking.travelerName}</td>
+                          <td className="py-3">{booking.destination}</td>
+                          <td className="py-3">
+                            {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                          </td>
+                          <td className="py-3">
+                            <Badge
+                              variant={
+                                booking.status === "Confirmed"
+                                  ? "success"
+                                  : "warning"
+                              }
+                            >
+                              {booking.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3">${booking.amount}</td>
+                          <td className="py-3 text-right">
+                            <div className="flex items-center justify-end space-x-2">
+                              <Button variant="ghost" size="icon">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="clients" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Client List</CardTitle>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Client
+                  </Button>
+                </div>
+                <CardDescription>
+                  Access traveller details, preferences, and travel history
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-dark" />
+                      <input
+                        type="text"
+                        placeholder="Search clients..."
+                        className="pl-9 pr-4 py-2 border rounded-md w-64"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Filter className="mr-2 h-4 w-4" />
+                      Filter
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {recentBookings.map((booking) => (
+                    <Card key={booking.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center mb-4 mt-2">
+                          <Avatar className="h-12 w-12 mr-4">
+                            <AvatarFallback>
+                              {booking.travelerName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h3 className="font-medium">{booking.travelerName}</h3>
+                            <p className="text-sm text-neutral-dark">
+                              Client since 2023
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-neutral-dark">Email:</span>
+                            <span>client{booking.id}@example.com</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-neutral-dark">Phone:</span>
+                            <span>+1 (555) 123-45{booking.id}8</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-neutral-dark">Last Trip:</span>
+                            <span>{booking.destination}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-neutral-dark">Total Trips:</span>
+                            <span>{booking.id + 1}</span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between mt-4">
+                          <Link href={`/client/${booking.id}`}>
+                            <Button variant="outline" size="sm">
+                              View Profile
+                            </Button>
+                          </Link>
+                          <Link href={`/messages?userId=${booking.id}`}>
+                            <Button size="sm">
+                              <MessageCircle className="h-4 w-4 mr-1" />
+                              Message
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="packages" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Package Creation</CardTitle>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Package
+                  </Button>
+                </div>
+                <CardDescription>
+                  Create and customize travel packages for your clients
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {travelPackages.map((pkg) => (
+                    <Card key={pkg.id}>
+                      <CardContent className="p-0">
+                        <div className="relative h-40 bg-primary/10">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Package className="h-16 w-16 text-primary" />
+                          </div>
+                          <div className="absolute top-3 right-3">
+                            <Badge>
+                              {pkg.bookings} booking{pkg.bookings !== 1 && "s"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <h3 className="text-lg font-semibold mb-2">
+                            {pkg.title}
+                          </h3>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-neutral-dark">Duration:</span>
+                            <span>{pkg.duration}</span>
+                          </div>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-neutral-dark">Price:</span>
+                            <span>${pkg.price}/person</span>
+                          </div>
+                          <div className="flex justify-between text-sm mb-4">
+                            <span className="text-neutral-dark">Destinations:</span>
+                            <span>{pkg.destinations.join(", ")}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <Button variant="outline" size="sm">
+                              <Pencil className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button size="sm">
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="itineraries" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Itinerary Builder</CardTitle>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Itinerary
+                  </Button>
+                </div>
+                <CardDescription>
+                  Build detailed day-wise plans with activities and logistics
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingItineraries ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : isItinerariesError ? (
+                  <div className="text-center py-6">
+                    <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-2" />
+                    <p className="text-neutral-dark">Failed to load itineraries. Please try again.</p>
+                    <Button variant="outline" className="mt-4">
+                      Retry
+                    </Button>
+                  </div>
+                ) : itineraries && itineraries.length > 0 ? (
+                  <div className="space-y-6">
+                    {itineraries.map((itinerary) => (
+                      <Card key={itinerary.id}>
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold text-lg mb-1">
+                                {itinerary.title}
+                              </h3>
+                              <p className="text-sm text-neutral-dark mb-2">
+                                {itinerary.destination} • {itinerary.days} days
+                              </p>
+                              <div className="flex items-center text-xs text-neutral-dark">
+                                <CalendarDays className="h-3 w-3 mr-1" />
+                                {new Date(itinerary.startDate).toLocaleDateString()} - {new Date(itinerary.endDate).toLocaleDateString()}
                               </div>
                             </div>
-                            <div className="p-4">
-                              <h3 className="text-lg font-semibold mb-2">
-                                {pkg.title}
-                              </h3>
-                              <div className="flex justify-between text-sm mb-2">
-                                <span className="text-neutral-dark">Duration:</span>
-                                <span>{pkg.duration}</span>
-                              </div>
-                              <div className="flex justify-between text-sm mb-2">
-                                <span className="text-neutral-dark">Price:</span>
-                                <span>${pkg.price}/person</span>
-                              </div>
-                              <div className="flex justify-between text-sm mb-4">
-                                <span className="text-neutral-dark">Destinations:</span>
-                                <span>{pkg.destinations.join(", ")}</span>
-                              </div>
-                              <div className="flex justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Link href={`/itinerary/${itinerary.id}/edit`}>
                                 <Button variant="outline" size="sm">
                                   <Pencil className="h-4 w-4 mr-1" />
                                   Edit
                                 </Button>
-                                <Button size="sm">
-                                  View Details
-                                </Button>
-                              </div>
+                              </Link>
+                              <Link href={`/itinerary/${itinerary.id}`}>
+                                <Button size="sm">View</Button>
+                              </Link>
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="itineraries" className="mt-0 space-y-6" forceMount={activeTab === "itineraries"}>
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>Itinerary Builder</CardTitle>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <Package className="h-16 w-16 text-neutral-dark/30 mx-auto mb-4" />
+                    <p className="text-neutral-dark mb-4">No itineraries created yet.</p>
+                    <Link href="/itinerary/new">
                       <Button>
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Itinerary
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Your First Itinerary
                       </Button>
-                    </div>
-                    <CardDescription>
-                      Build detailed day-wise plans with activities and logistics
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingItineraries ? (
-                      <div className="flex justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      </div>
-                    ) : isItinerariesError ? (
-                      <div className="text-center py-6">
-                        <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-2" />
-                        <p className="text-neutral-dark">Failed to load itineraries. Please try again.</p>
-                        <Button variant="outline" className="mt-4">
-                          Retry
-                        </Button>
-                      </div>
-                    ) : itineraries && itineraries.length > 0 ? (
-                      <div className="space-y-6">
-                        {itineraries.map((itinerary) => (
-                          <Card key={itinerary.id}>
-                            <CardContent className="p-4">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-1">
-                                    {itinerary.title}
-                                  </h3>
-                                  <p className="text-sm text-neutral-dark mb-2">
-                                    {itinerary.destination} • {itinerary.days} days
-                                  </p>
-                                  <div className="flex items-center text-xs text-neutral-dark">
-                                    <CalendarDays className="h-3 w-3 mr-1" />
-                                    {new Date(itinerary.startDate).toLocaleDateString()} - {new Date(itinerary.endDate).toLocaleDateString()}
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Link href={`/itinerary/${itinerary.id}/edit`}>
-                                    <Button variant="outline" size="sm">
-                                      <Pencil className="h-4 w-4 mr-1" />
-                                      Edit
-                                    </Button>
-                                  </Link>
-                                  <Link href={`/itinerary/${itinerary.id}`}>
-                                    <Button size="sm">View</Button>
-                                  </Link>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-10">
-                        <Package className="h-16 w-16 text-neutral-dark/30 mx-auto mb-4" />
-                        <p className="text-neutral-dark mb-4">No itineraries created yet.</p>
-                        <Link href="/itinerary/new">
-                          <Button>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Create Your First Itinerary
-                          </Button>
-                        </Link>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <TabsContent value="messages" className="mt-0 space-y-6" forceMount={activeTab === "messages"}>
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>Client Communication</CardTitle>
-                      <Link href="/messages">
-                        <Button>
-                          Open Message Center
-                        </Button>
-                      </Link>
-                    </div>
-                    <CardDescription>
-                      Chat with travelers, send updates and notifications
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingMessages ? (
-                      <div className="flex justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      </div>
-                    ) : messages && messages.length > 0 ? (
-                      <div className="space-y-4">
-                        {messages.slice(0, 5).map((message, index) => (
-                          <div key={index} className="flex items-start p-3 bg-background rounded-lg">
-                            <Avatar className="h-10 w-10 mr-3 mt-1">
-                              <AvatarFallback>
-                                {message.senderId === user?.id ? "Me" : "C" + message.senderId}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="font-medium">
-                                  {message.senderId === user?.id 
-                                    ? `You → Client #${message.receiverId}` 
-                                    : `Client #${message.senderId}`}
-                                </div>
-                                <div className="text-xs text-neutral-dark">
-                                  {new Date(message.sentAt).toLocaleString()}
-                                </div>
-                              </div>
-                              <p className="text-sm text-neutral-dark">
-                                {message.content}
-                              </p>
-                              {!message.isRead && message.receiverId === user?.id && (
-                                <Badge variant="secondary" className="mt-2">
-                                  Unread
-                                </Badge>
-                              )}
+          <TabsContent value="messages" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Client Communication</CardTitle>
+                  <Link href="/messages">
+                    <Button>
+                      Open Message Center
+                    </Button>
+                  </Link>
+                </div>
+                <CardDescription>
+                  Chat with travelers, send updates and notifications
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingMessages ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : messages && messages.length > 0 ? (
+                  <div className="space-y-4">
+                    {messages.slice(0, 5).map((message, index) => (
+                      <div key={index} className="flex items-start p-3 bg-background rounded-lg">
+                        <Avatar className="h-10 w-10 mr-3 mt-1">
+                          <AvatarFallback>
+                            {message.senderId === user?.id ? "Me" : "C" + message.senderId}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="font-medium">
+                              {message.senderId === user?.id
+                                ? `You → Client #${message.receiverId}`
+                                : `Client #${message.senderId}`}
+                            </div>
+                            <div className="text-xs text-neutral-dark">
+                              {new Date(message.sentAt).toLocaleString()}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-10">
-                        <MessageCircle className="h-16 w-16 text-neutral-dark/30 mx-auto mb-4" />
-                        <p className="text-neutral-dark">No messages yet.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="analytics" className="mt-0 space-y-6" forceMount={activeTab === "analytics"}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Reports & Analytics</CardTitle>
-                    <CardDescription>
-                      View revenue, booking trends, and most popular packages
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                      <Card>
-                        <CardContent className="p-4">
-                          <h3 className="text-sm font-medium text-neutral-dark mb-2">
-                            Total Revenue
-                          </h3>
-                          <p className="text-2xl font-bold">${revenueData.total}</p>
-                          <Progress value={85} className="h-1 mt-2" />
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-4">
-                          <h3 className="text-sm font-medium text-neutral-dark mb-2">
-                            This Month
-                          </h3>
-                          <p className="text-2xl font-bold">${revenueData.thisMonth}</p>
-                          <div className="flex items-center mt-2">
-                            <Progress value={65} className="h-1 flex-1" />
-                            <span className="text-xs text-emerald-600 ml-2">
-                              +17%
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-4">
-                          <h3 className="text-sm font-medium text-neutral-dark mb-2">
-                            Last Month
-                          </h3>
-                          <p className="text-2xl font-bold">${revenueData.lastMonth}</p>
-                          <Progress value={55} className="h-1 mt-2" />
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-4">
-                          <h3 className="text-sm font-medium text-neutral-dark mb-2">
-                            Pending
-                          </h3>
-                          <p className="text-2xl font-bold">${revenueData.pending}</p>
-                          <Progress value={35} className="h-1 mt-2" />
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <h3 className="font-semibold text-lg mb-4">Popular Packages</h3>
-                    <div className="space-y-4">
-                      {travelPackages
-                        .sort((a, b) => b.bookings - a.bookings)
-                        .map((pkg) => (
-                          <div
-                            key={pkg.id}
-                            className="flex items-center justify-between py-3 border-b last:border-0"
-                          >
-                            <div className="flex items-center">
-                              <div className="bg-primary/10 p-2 rounded-full mr-3">
-                                <Package className="h-5 w-5 text-primary" />
-                              </div>
-                              <div>
-                                <h4 className="font-medium">{pkg.title}</h4>
-                                <p className="text-sm text-neutral-dark">
-                                  {pkg.duration} • ${pkg.price}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-bold">{pkg.bookings}</div>
-                              <div className="text-xs text-neutral-dark">
-                                bookings
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="payments" className="mt-0 space-y-6" forceMount={activeTab === "payments"}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Payments Tracking</CardTitle>
-                    <CardDescription>
-                      Track received and pending payments from travelers
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center space-x-2">
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-dark" />
-                          <input
-                            type="text"
-                            placeholder="Search payments..."
-                            className="pl-9 pr-4 py-2 border rounded-md w-64"
-                          />
+                          <p className="text-sm text-neutral-dark">
+                            {message.content}
+                          </p>
+                          {!message.isRead && message.receiverId === user?.id && (
+                            <Badge variant="secondary" className="mt-2">
+                              Unread
+                            </Badge>
+                          )}
                         </div>
-                        <Button variant="outline" size="sm">
-                          <Filter className="mr-2 h-4 w-4" />
-                          Filter
-                        </Button>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm">
-                          Download Report
-                        </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <MessageCircle className="h-16 w-16 text-neutral-dark/30 mx-auto mb-4" />
+                    <p className="text-neutral-dark">No messages yet.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Reports & Analytics</CardTitle>
+                <CardDescription>
+                  View revenue, booking trends, and most popular packages
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                  <Card>
+                    <CardContent className="p-4">
+                      <h3 className="text-sm font-medium text-neutral-dark mb-2">
+                        Total Revenue
+                      </h3>
+                      <p className="text-2xl font-bold">${revenueData.total}</p>
+                      <Progress value={85} className="h-1 mt-2" />
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <h3 className="text-sm font-medium text-neutral-dark mb-2">
+                        This Month
+                      </h3>
+                      <p className="text-2xl font-bold">${revenueData.thisMonth}</p>
+                      <div className="flex items-center mt-2">
+                        <Progress value={65} className="h-1 flex-1" />
+                        <span className="text-xs text-emerald-600 ml-2">
+                          +17%
+                        </span>
                       </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <h3 className="text-sm font-medium text-neutral-dark mb-2">
+                        Last Month
+                      </h3>
+                      <p className="text-2xl font-bold">${revenueData.lastMonth}</p>
+                      <Progress value={55} className="h-1 mt-2" />
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <h3 className="text-sm font-medium text-neutral-dark mb-2">
+                        Pending
+                      </h3>
+                      <p className="text-2xl font-bold">${revenueData.pending}</p>
+                      <Progress value={35} className="h-1 mt-2" />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <h3 className="font-semibold text-lg mb-4">Popular Packages</h3>
+                <div className="space-y-4">
+                  {travelPackages
+                    .sort((a, b) => b.bookings - a.bookings)
+                    .map((pkg) => (
+                      <div
+                        key={pkg.id}
+                        className="flex items-center justify-between py-3 border-b last:border-0"
+                      >
+                        <div className="flex items-center">
+                          <div className="bg-primary/10 p-2 rounded-full mr-3">
+                            <Package className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium">{pkg.title}</h4>
+                            <p className="text-sm text-neutral-dark">
+                              {pkg.duration} • ${pkg.price}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold">{pkg.bookings}</div>
+                          <div className="text-xs text-neutral-dark">
+                            bookings
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="payments" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Payments Tracking</CardTitle>
+                <CardDescription>
+                  Track received and pending payments from travelers
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-dark" />
+                      <input
+                        type="text"
+                        placeholder="Search payments..."
+                        className="pl-9 pr-4 py-2 border rounded-md w-64"
+                      />
                     </div>
-                    
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left pb-3 font-medium">ID</th>
-                            <th className="text-left pb-3 font-medium">Client</th>
-                            <th className="text-left pb-3 font-medium">Package</th>
-                            <th className="text-left pb-3 font-medium">Amount</th>
-                            <th className="text-left pb-3 font-medium">Date</th>
-                            <th className="text-left pb-3 font-medium">Status</th>
-                            <th className="text-right pb-3 font-medium">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {recentBookings.map((booking, i) => (
-                            <tr key={i} className="border-b last:border-0">
-                              <td className="py-3">PAY-{1000 + i}</td>
-                              <td className="py-3">{booking.travelerName}</td>
-                              <td className="py-3">
-                                {travelPackages[i % travelPackages.length].title}
-                              </td>
-                              <td className="py-3">${booking.amount}</td>
-                              <td className="py-3">
-                                {new Date(booking.startDate).toLocaleDateString()}
-                              </td>
-                              <td className="py-3">
-                                <Badge
-                                  variant={
-                                    i === 1 ? "warning" : "success"
-                                  }
-                                >
-                                  {i === 1 ? "Pending" : "Completed"}
-                                </Badge>
-                              </td>
-                              <td className="py-3 text-right">
-                                <Button variant="ghost" size="icon">
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </div>
-          </div>
-        </div>
+                    <Button variant="outline" size="sm">
+                      <Filter className="mr-2 h-4 w-4" />
+                      Filter
+                    </Button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm">
+                      Download Report
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left pb-3 font-medium">ID</th>
+                        <th className="text-left pb-3 font-medium">Client</th>
+                        <th className="text-left pb-3 font-medium">Package</th>
+                        <th className="text-left pb-3 font-medium">Amount</th>
+                        <th className="text-left pb-3 font-medium">Date</th>
+                        <th className="text-left pb-3 font-medium">Status</th>
+                        <th className="text-right pb-3 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentBookings.map((booking, i) => (
+                        <tr key={i} className="border-b last:border-0">
+                          <td className="py-3">PAY-{1000 + i}</td>
+                          <td className="py-3">{booking.travelerName}</td>
+                          <td className="py-3">
+                            {travelPackages[i % travelPackages.length].title}
+                          </td>
+                          <td className="py-3">${booking.amount}</td>
+                          <td className="py-3">
+                            {new Date(booking.startDate).toLocaleDateString()}
+                          </td>
+                          <td className="py-3">
+                            <Badge
+                              variant={
+                                i === 1 ? "warning" : "success"
+                              }
+                            >
+                              {i === 1 ? "Pending" : "Completed"}
+                            </Badge>
+                          </td>
+                                                    <td className="py-3 text-right">
+                            <Button variant="ghost" size="icon">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
       <Footer />
     </div>
