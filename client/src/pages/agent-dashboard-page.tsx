@@ -1,1036 +1,999 @@
 import { useState } from "react";
-import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Redirect } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { 
-  Calendar, 
-  MessageCircle, 
-  Users, 
-  DollarSign, 
-  BarChart2, 
-  ClipboardList,
-  Clock,
-  Loader2,
-  Plus,
-  User,
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  MessageCircle,
+  CalendarDays,
+  Package,
+  Users,
+  FileEdit,
+  BarChart3,
   CreditCard,
-  MapPin,
-  Check
+  Plus,
+  Pencil,
+  Trash2,
+  Filter,
+  Search,
+  AlertCircle,
+  Clock,
+  CheckCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { z } from "zod";
-import { TripPreference, Itinerary, Message, InsertItinerary } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
+import { Itinerary, TripPreference } from "@shared/schema";
 
-// Schema for creating a new itinerary
-const createItinerarySchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  totalPrice: z.coerce.number().positive("Price must be positive"),
-  status: z.string().min(1, "Status is required"),
-  tripPreferenceId: z.coerce.number().positive("Trip preference is required"),
-  travelerId: z.coerce.number().positive("Traveler is required"),
-  details: z.any(), // This will be handled separately as a JSON object
-});
-
-type CreateItineraryValues = z.infer<typeof createItinerarySchema>;
-
-const AgentDashboardPage = () => {
-  const [, setLocation] = useLocation();
+export default function AgentDashboardPage() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [selectedTripPreference, setSelectedTripPreference] = useState<TripPreference | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [itineraryDetails, setItineraryDetails] = useState([
-    { day: 1, activities: "", accommodation: "", meals: "", transportation: "" }
-  ]);
-  
-  // Fetch trip preferences (available to all agents)
-  const { 
-    data: tripPreferences, 
-    isLoading: isLoadingPreferences,
-    isError: isPreferencesError
-  } = useQuery<TripPreference[]>({
-    queryKey: ["/api/trip-preferences"],
-    enabled: !!user,
-  });
-  
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [activeTab, setActiveTab] = useState("overview");
+
   // Fetch agent's itineraries
   const {
     data: itineraries,
     isLoading: isLoadingItineraries,
-    isError: isItinerariesError
+    isError: isItinerariesError,
   } = useQuery<Itinerary[]>({
-    queryKey: ["/api/itineraries"],
-    enabled: !!user,
+    queryKey: ["/api/itineraries/agent"],
+    enabled: !!user && user.role === "agent",
   });
-  
-  // Fetch messages
+
+  // Fetch message counts (unread)
   const {
     data: messages,
     isLoading: isLoadingMessages,
-    isError: isMessagesError
-  } = useQuery<Message[]>({
+  } = useQuery({
     queryKey: ["/api/messages"],
     enabled: !!user,
   });
-  
-  const form = useForm<CreateItineraryValues>({
-    resolver: zodResolver(createItinerarySchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      totalPrice: 0,
-      status: "draft",
-      tripPreferenceId: 0,
-      travelerId: 0,
-      details: [],
-    },
+
+  // Calculate unread messages count
+  const unreadMessagesCount = messages?.filter(
+    (msg) => msg.receiverId === user?.id && !msg.isRead
+  ).length || 0;
+
+  // Fetch trip preferences (matching opportunities)
+  const {
+    data: tripPreferences,
+    isLoading: isLoadingPreferences,
+  } = useQuery<TripPreference[]>({
+    queryKey: ["/api/trip-preferences"],
+    enabled: !!user && user.role === "agent",
   });
-  
-  // If user not loaded yet or not an agent, show loading or redirect
+
+  // Redirect if not an agent
+  if (user && user.role !== "agent") {
+    return <Redirect to="/traveler-dashboard" />;
+  }
+
+  // Redirect if not logged in
   if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-grow flex items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </main>
-        <Footer />
-      </div>
-    );
+    return <Redirect to="/auth" />;
   }
-  
-  if (user.role !== "agent") {
-    setLocation("/dashboard/traveler");
-    return null;
-  }
-  
-  const getInitials = (name: string = "") => {
-    return name.split(" ")
-      .map(part => part.charAt(0))
-      .join("")
-      .toUpperCase();
-  };
-  
-  const draftItineraries = itineraries?.filter(itinerary => itinerary.status === "draft") || [];
-  const proposedItineraries = itineraries?.filter(itinerary => itinerary.status === "proposed") || [];
-  const confirmedItineraries = itineraries?.filter(itinerary => 
-    itinerary.status === "confirmed" || itinerary.status === "completed"
-  ) || [];
-  
-  const unreadMessages = messages?.filter(message => 
-    !message.isRead && message.receiverId === user.id
-  ) || [];
-  
-  const handleCreateItinerary = async (data: CreateItineraryValues) => {
-    try {
-      const itineraryData: InsertItinerary = {
-        ...data,
-        agentId: user.id,
-        details: itineraryDetails,
-      };
-      
-      await apiRequest("POST", "/api/itineraries", itineraryData);
-      
-      toast({
-        title: "Itinerary created",
-        description: "Your itinerary has been created successfully",
-      });
-      
-      // Invalidate itineraries query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["/api/itineraries"] });
-      
-      // Reset form and close dialog
-      form.reset();
-      setItineraryDetails([
-        { day: 1, activities: "", accommodation: "", meals: "", transportation: "" }
-      ]);
-      setIsCreateDialogOpen(false);
-    } catch (error) {
-      toast({
-        title: "Error creating itinerary",
-        description: "There was an error creating your itinerary. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const handleTripPreferenceSelect = (preference: TripPreference) => {
-    setSelectedTripPreference(preference);
-    
-    // Set form values based on selected preference
-    form.setValue("title", `${preference.destination} - Custom Itinerary`);
-    form.setValue("tripPreferenceId", preference.id);
-    form.setValue("travelerId", preference.travelerId);
-    
-    // Generate a description based on the preference
-    const styles = preference.travelStyles.join(", ");
-    const description = `Custom ${preference.destination} itinerary designed for ${styles} travel styles, planned for ${preference.startDate} to ${preference.endDate} with a ${preference.budget} budget.`;
-    form.setValue("description", description);
-    
-    // Show the create itinerary dialog
-    setIsCreateDialogOpen(true);
-  };
-  
-  const addItineraryDay = () => {
-    const nextDay = itineraryDetails.length + 1;
-    setItineraryDetails([
-      ...itineraryDetails,
-      { day: nextDay, activities: "", accommodation: "", meals: "", transportation: "" }
-    ]);
-  };
-  
-  const updateItineraryDay = (index: number, field: string, value: string) => {
-    const updated = [...itineraryDetails];
-    updated[index] = { ...updated[index], [field]: value };
-    setItineraryDetails(updated);
-  };
-  
-  const removeItineraryDay = (index: number) => {
-    if (itineraryDetails.length <= 1) return;
-    
-    const updated = itineraryDetails.filter((_, i) => i !== index)
-      .map((day, i) => ({ ...day, day: i + 1 }));
-    setItineraryDetails(updated);
+
+  // Mock data for demonstration purposes
+  const recentBookings = [
+    {
+      id: 1,
+      travelerName: "Emma Watson",
+      destination: "Tokyo, Japan",
+      startDate: "2025-05-10",
+      endDate: "2025-05-20",
+      status: "Confirmed",
+      amount: 3250,
+    },
+    {
+      id: 2,
+      travelerName: "Michael Chen",
+      destination: "Paris, France",
+      startDate: "2025-06-15",
+      endDate: "2025-06-22",
+      status: "Pending",
+      amount: 2870,
+    },
+    {
+      id: 3,
+      travelerName: "Sarah Johnson",
+      destination: "Bali, Indonesia",
+      startDate: "2025-07-01",
+      endDate: "2025-07-12",
+      status: "Confirmed",
+      amount: 3600,
+    },
+  ];
+
+  const travelPackages = [
+    {
+      id: 1,
+      title: "Japanese Cultural Immersion",
+      duration: "10 days",
+      destinations: ["Tokyo", "Kyoto", "Osaka"],
+      price: 3200,
+      bookings: 12,
+    },
+    {
+      id: 2,
+      title: "European Highlights Tour",
+      duration: "14 days",
+      destinations: ["Paris", "Rome", "Barcelona"],
+      price: 4500,
+      bookings: 8,
+    },
+    {
+      id: 3,
+      title: "Tropical Paradise Getaway",
+      duration: "7 days",
+      destinations: ["Bali", "Lombok"],
+      price: 2200,
+      bookings: 15,
+    },
+  ];
+
+  const upcomingTasks = [
+    {
+      id: 1,
+      title: "Confirm reservation for Emma Watson",
+      dueDate: "2025-04-30",
+      priority: "High",
+    },
+    {
+      id: 2,
+      title: "Send itinerary details to Michael Chen",
+      dueDate: "2025-05-05",
+      priority: "Medium",
+    },
+    {
+      id: 3,
+      title: "Book tour guide for Bali trip",
+      dueDate: "2025-05-15",
+      priority: "Medium",
+    },
+    {
+      id: 4,
+      title: "Prepare custom Tokyo itinerary",
+      dueDate: "2025-05-02",
+      priority: "High",
+    },
+  ];
+
+  const revenueData = {
+    total: 28750,
+    pending: 5400,
+    thisMonth: 9600,
+    lastMonth: 8200,
   };
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-grow bg-neutral-light py-8">
-        <div className="container mx-auto px-4">
-          {/* Dashboard Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-heading font-bold mb-2">Agent Dashboard</h1>
-            <p className="text-neutral-dark">Manage your itineraries, messages, and client preferences</p>
+      <main className="flex-grow bg-neutral-light">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Agent Dashboard</h1>
+              <p className="text-neutral-dark">
+                Manage your bookings, clients, and travel packages
+              </p>
+            </div>
+            <div className="mt-4 md:mt-0 flex gap-3">
+              <Link href="/messages">
+                <Button variant="outline" className="relative">
+                  <MessageCircle className="mr-2 h-5 w-5" />
+                  Messages
+                  {unreadMessagesCount > 0 && (
+                    <Badge className="absolute -top-2 -right-2 bg-primary text-white">
+                      {unreadMessagesCount}
+                    </Badge>
+                  )}
+                </Button>
+              </Link>
+              <Link href="/itinerary/new">
+                <Button>
+                  <Plus className="mr-2 h-5 w-5" />
+                  New Itinerary
+                </Button>
+              </Link>
+            </div>
           </div>
-          
-          {/* Dashboard Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card>
-              <CardContent className="p-6 flex items-center">
-                <div className="bg-primary/10 p-3 rounded-full mr-4">
-                  <ClipboardList className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-neutral-dark">Active Itineraries</p>
-                  <h3 className="text-2xl font-semibold">
-                    {isLoadingItineraries ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      confirmedItineraries.length
-                    )}
-                  </h3>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-6 flex items-center">
-                <div className="bg-primary/10 p-3 rounded-full mr-4">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-neutral-dark">New Requests</p>
-                  <h3 className="text-2xl font-semibold">
-                    {isLoadingPreferences ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      tripPreferences?.filter(p => 
-                        !itineraries?.some(i => i.tripPreferenceId === p.id)
-                      ).length || 0
-                    )}
-                  </h3>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-6 flex items-center">
-                <div className="bg-primary/10 p-3 rounded-full mr-4">
-                  <MessageCircle className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-neutral-dark">Unread Messages</p>
-                  <h3 className="text-2xl font-semibold">
-                    {isLoadingMessages ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      unreadMessages.length
-                    )}
-                  </h3>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-6 flex items-center">
-                <div className="bg-primary/10 p-3 rounded-full mr-4">
-                  <DollarSign className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-neutral-dark">Total Revenue</p>
-                  <h3 className="text-2xl font-semibold">
-                    {isLoadingItineraries ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      `$${confirmedItineraries.reduce((sum, itinerary) => sum + itinerary.totalPrice, 0).toLocaleString()}`
-                    )}
-                  </h3>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <Tabs defaultValue="requests">
-            <TabsList className="mb-6">
-              <TabsTrigger value="requests">Trip Requests</TabsTrigger>
-              <TabsTrigger value="itineraries">My Itineraries</TabsTrigger>
-              <TabsTrigger value="messages">Messages</TabsTrigger>
-              <TabsTrigger value="profile">Profile</TabsTrigger>
-            </TabsList>
-            
-            {/* Trip Requests Tab */}
-            <TabsContent value="requests">
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Sidebar Navigation */}
+            <div className="lg:col-span-1">
               <Card>
-                <CardHeader>
-                  <CardTitle>New Trip Requests</CardTitle>
+                <CardContent className="p-0">
+                  <nav className="flex flex-col">
+                    <Button
+                      variant={activeTab === "overview" ? "default" : "ghost"}
+                      className="justify-start rounded-none h-14"
+                      onClick={() => setActiveTab("overview")}
+                    >
+                      <BarChart3 className="mr-3 h-5 w-5" />
+                      Overview
+                    </Button>
+                    <Button
+                      variant={activeTab === "bookings" ? "default" : "ghost"}
+                      className="justify-start rounded-none h-14"
+                      onClick={() => setActiveTab("bookings")}
+                    >
+                      <CalendarDays className="mr-3 h-5 w-5" />
+                      Manage Bookings
+                    </Button>
+                    <Button
+                      variant={activeTab === "clients" ? "default" : "ghost"}
+                      className="justify-start rounded-none h-14"
+                      onClick={() => setActiveTab("clients")}
+                    >
+                      <Users className="mr-3 h-5 w-5" />
+                      Client List
+                    </Button>
+                    <Button
+                      variant={activeTab === "packages" ? "default" : "ghost"}
+                      className="justify-start rounded-none h-14"
+                      onClick={() => setActiveTab("packages")}
+                    >
+                      <Package className="mr-3 h-5 w-5" />
+                      Package Creation
+                    </Button>
+                    <Button
+                      variant={activeTab === "itineraries" ? "default" : "ghost"}
+                      className="justify-start rounded-none h-14"
+                      onClick={() => setActiveTab("itineraries")}
+                    >
+                      <FileEdit className="mr-3 h-5 w-5" />
+                      Itinerary Builder
+                    </Button>
+                    <Button
+                      variant={activeTab === "messages" ? "default" : "ghost"}
+                      className="justify-start rounded-none h-14"
+                      onClick={() => setActiveTab("messages")}
+                    >
+                      <MessageCircle className="mr-3 h-5 w-5" />
+                      Client Communication
+                    </Button>
+                    <Button
+                      variant={activeTab === "analytics" ? "default" : "ghost"}
+                      className="justify-start rounded-none h-14"
+                      onClick={() => setActiveTab("analytics")}
+                    >
+                      <BarChart3 className="mr-3 h-5 w-5" />
+                      Reports & Analytics
+                    </Button>
+                    <Button
+                      variant={activeTab === "payments" ? "default" : "ghost"}
+                      className="justify-start rounded-none h-14"
+                      onClick={() => setActiveTab("payments")}
+                    >
+                      <CreditCard className="mr-3 h-5 w-5" />
+                      Payments Tracking
+                    </Button>
+                  </nav>
+                </CardContent>
+              </Card>
+
+              <Card className="mt-6">
+                <CardHeader className="pb-3">
+                  <CardTitle>Calendar</CardTitle>
                   <CardDescription>
-                    Travelers looking for customized itineraries matching your expertise
+                    Upcoming bookings and deadlines
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {isLoadingPreferences || isLoadingItineraries ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    className="rounded-md border"
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="lg:col-span-3">
+              <TabsContent value="overview" className="mt-0 space-y-6" forceMount={activeTab === "overview"}>
+                {/* Statistics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        Total Bookings
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">{recentBookings.length}</div>
+                      <p className="text-xs text-neutral-dark mt-1">
+                        3 new in last 30 days
+                      </p>
+                      <Progress value={75} className="h-1 mt-3" />
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        Revenue
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">${revenueData.total}</div>
+                      <p className="text-xs text-neutral-dark mt-1">
+                        +17% from last month
+                      </p>
+                      <Progress value={65} className="h-1 mt-3" />
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        Active Clients
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">12</div>
+                      <p className="text-xs text-neutral-dark mt-1">
+                        5 new inquiries
+                      </p>
+                      <Progress value={85} className="h-1 mt-3" />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Recent Bookings */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recent Bookings</CardTitle>
+                    <CardDescription>
+                      Your latest travel bookings and their status
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left pb-3 font-medium">Client</th>
+                            <th className="text-left pb-3 font-medium">Destination</th>
+                            <th className="text-left pb-3 font-medium">Date</th>
+                            <th className="text-left pb-3 font-medium">Status</th>
+                            <th className="text-left pb-3 font-medium">Amount</th>
+                            <th className="text-right pb-3 font-medium">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentBookings.map((booking) => (
+                            <tr key={booking.id} className="border-b last:border-0">
+                              <td className="py-3">{booking.travelerName}</td>
+                              <td className="py-3">{booking.destination}</td>
+                              <td className="py-3">
+                                {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                              </td>
+                              <td className="py-3">
+                                <Badge
+                                  variant={
+                                    booking.status === "Confirmed"
+                                      ? "success"
+                                      : "warning"
+                                  }
+                                >
+                                  {booking.status}
+                                </Badge>
+                              </td>
+                              <td className="py-3">${booking.amount}</td>
+                              <td className="py-3 text-right">
+                                <Button variant="ghost" size="icon">
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  ) : isPreferencesError ? (
-                    <div className="text-center py-6">
-                      <p className="text-neutral-dark">Failed to load trip requests. Please try again later.</p>
-                    </div>
-                  ) : tripPreferences && tripPreferences.length > 0 ? (
-                    <div className="space-y-6">
-                      {tripPreferences
-                        .filter(preference => !itineraries?.some(i => i.tripPreferenceId === preference.id))
-                        .map((preference, index) => (
-                          <div key={index} className="border rounded-lg p-5 hover:border-primary transition-colors cursor-pointer" onClick={() => handleTripPreferenceSelect(preference)}>
-                            <div className="flex justify-between items-center mb-4">
-                              <h3 className="font-medium text-lg">{preference.destination} Trip Request</h3>
-                              <Badge variant="outline">
-                                {preference.budget.charAt(0).toUpperCase() + preference.budget.slice(1)}
-                              </Badge>
+                  </CardContent>
+                </Card>
+
+                {/* Upcoming Tasks */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Upcoming Tasks</CardTitle>
+                    <CardDescription>
+                      Tasks and deadlines that require your attention
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {upcomingTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="flex items-start justify-between p-3 bg-background rounded-lg"
+                        >
+                          <div className="flex items-start">
+                            <div
+                              className={`w-2 h-2 rounded-full mt-2 mr-3 ${
+                                task.priority === "High"
+                                  ? "bg-red-500"
+                                  : "bg-yellow-500"
+                              }`}
+                            ></div>
+                            <div>
+                              <p className="font-medium">{task.title}</p>
+                              <div className="flex items-center mt-1 text-sm text-neutral-dark">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Due: {new Date(task.dueDate).toLocaleDateString()}
+                              </div>
                             </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                          </div>
+                          <Button variant="outline" size="sm">
+                            Complete
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="bookings" className="mt-0 space-y-6" forceMount={activeTab === "bookings"}>
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Manage Bookings</CardTitle>
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        New Booking
+                      </Button>
+                    </div>
+                    <CardDescription>
+                      Add, modify, or cancel client bookings
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center space-x-2">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-dark" />
+                          <input
+                            type="text"
+                            placeholder="Search bookings..."
+                            className="pl-9 pr-4 py-2 border rounded-md w-64"
+                          />
+                        </div>
+                        <Button variant="outline" size="sm">
+                          <Filter className="mr-2 h-4 w-4" />
+                          Filter
+                        </Button>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm">
+                          Export
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          Print
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left pb-3 font-medium">ID</th>
+                            <th className="text-left pb-3 font-medium">Client</th>
+                            <th className="text-left pb-3 font-medium">Destination</th>
+                            <th className="text-left pb-3 font-medium">Travel Dates</th>
+                            <th className="text-left pb-3 font-medium">Status</th>
+                            <th className="text-left pb-3 font-medium">Payment</th>
+                            <th className="text-right pb-3 font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentBookings.map((booking) => (
+                            <tr key={booking.id} className="border-b last:border-0">
+                              <td className="py-3">#{booking.id}</td>
+                              <td className="py-3">{booking.travelerName}</td>
+                              <td className="py-3">{booking.destination}</td>
+                              <td className="py-3">
+                                {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                              </td>
+                              <td className="py-3">
+                                <Badge
+                                  variant={
+                                    booking.status === "Confirmed"
+                                      ? "success"
+                                      : "warning"
+                                  }
+                                >
+                                  {booking.status}
+                                </Badge>
+                              </td>
+                              <td className="py-3">${booking.amount}</td>
+                              <td className="py-3 text-right">
+                                <div className="flex items-center justify-end space-x-2">
+                                  <Button variant="ghost" size="icon">
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="clients" className="mt-0 space-y-6" forceMount={activeTab === "clients"}>
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Client List</CardTitle>
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Client
+                      </Button>
+                    </div>
+                    <CardDescription>
+                      Access traveller details, preferences, and travel history
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center space-x-2">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-dark" />
+                          <input
+                            type="text"
+                            placeholder="Search clients..."
+                            className="pl-9 pr-4 py-2 border rounded-md w-64"
+                          />
+                        </div>
+                        <Button variant="outline" size="sm">
+                          <Filter className="mr-2 h-4 w-4" />
+                          Filter
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {recentBookings.map((booking) => (
+                        <Card key={booking.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center mb-4 mt-2">
+                              <Avatar className="h-12 w-12 mr-4">
+                                <AvatarFallback>
+                                  {booking.travelerName
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")}
+                                </AvatarFallback>
+                              </Avatar>
                               <div>
-                                <p className="text-sm text-neutral-dark">Travel Dates</p>
-                                <p className="font-medium">
-                                  {new Date(preference.startDate).toLocaleDateString()} - {new Date(preference.endDate).toLocaleDateString()}
+                                <h3 className="font-medium">{booking.travelerName}</h3>
+                                <p className="text-sm text-neutral-dark">
+                                  Client since 2023
                                 </p>
                               </div>
-                              
-                              <div>
-                                <p className="text-sm text-neutral-dark">Traveler</p>
-                                <p className="font-medium">ID: {preference.travelerId}</p>
+                            </div>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-neutral-dark">Email:</span>
+                                <span>client{booking.id}@example.com</span>
                               </div>
-                              
+                              <div className="flex justify-between">
+                                <span className="text-neutral-dark">Phone:</span>
+                                <span>+1 (555) 123-45{booking.id}8</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-neutral-dark">Last Trip:</span>
+                                <span>{booking.destination}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-neutral-dark">Total Trips:</span>
+                                <span>{booking.id + 1}</span>
+                              </div>
+                            </div>
+                            <div className="flex justify-between mt-4">
+                              <Link href={`/client/${booking.id}`}>
+                                <Button variant="outline" size="sm">
+                                  View Profile
+                                </Button>
+                              </Link>
+                              <Link href={`/messages?userId=${booking.id}`}>
+                                <Button size="sm">
+                                  <MessageCircle className="h-4 w-4 mr-1" />
+                                  Message
+                                </Button>
+                              </Link>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="packages" className="mt-0 space-y-6" forceMount={activeTab === "packages"}>
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Package Creation</CardTitle>
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Package
+                      </Button>
+                    </div>
+                    <CardDescription>
+                      Create and customize travel packages for your clients
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {travelPackages.map((pkg) => (
+                        <Card key={pkg.id}>
+                          <CardContent className="p-0">
+                            <div className="relative h-40 bg-primary/10">
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <Package className="h-16 w-16 text-primary" />
+                              </div>
+                              <div className="absolute top-3 right-3">
+                                <Badge>
+                                  {pkg.bookings} booking{pkg.bookings !== 1 && "s"}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <h3 className="text-lg font-semibold mb-2">
+                                {pkg.title}
+                              </h3>
+                              <div className="flex justify-between text-sm mb-2">
+                                <span className="text-neutral-dark">Duration:</span>
+                                <span>{pkg.duration}</span>
+                              </div>
+                              <div className="flex justify-between text-sm mb-2">
+                                <span className="text-neutral-dark">Price:</span>
+                                <span>${pkg.price}/person</span>
+                              </div>
+                              <div className="flex justify-between text-sm mb-4">
+                                <span className="text-neutral-dark">Destinations:</span>
+                                <span>{pkg.destinations.join(", ")}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <Button variant="outline" size="sm">
+                                  <Pencil className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
+                                <Button size="sm">
+                                  View Details
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="itineraries" className="mt-0 space-y-6" forceMount={activeTab === "itineraries"}>
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Itinerary Builder</CardTitle>
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        New Itinerary
+                      </Button>
+                    </div>
+                    <CardDescription>
+                      Build detailed day-wise plans with activities and logistics
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingItineraries ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      </div>
+                    ) : isItinerariesError ? (
+                      <div className="text-center py-6">
+                        <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-2" />
+                        <p className="text-neutral-dark">Failed to load itineraries. Please try again.</p>
+                        <Button variant="outline" className="mt-4">
+                          Retry
+                        </Button>
+                      </div>
+                    ) : itineraries && itineraries.length > 0 ? (
+                      <div className="space-y-6">
+                        {itineraries.map((itinerary) => (
+                          <Card key={itinerary.id}>
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-1">
+                                    {itinerary.title}
+                                  </h3>
+                                  <p className="text-sm text-neutral-dark mb-2">
+                                    {itinerary.destination} • {itinerary.days} days
+                                  </p>
+                                  <div className="flex items-center text-xs text-neutral-dark">
+                                    <CalendarDays className="h-3 w-3 mr-1" />
+                                    {new Date(itinerary.startDate).toLocaleDateString()} - {new Date(itinerary.endDate).toLocaleDateString()}
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Link href={`/itinerary/${itinerary.id}/edit`}>
+                                    <Button variant="outline" size="sm">
+                                      <Pencil className="h-4 w-4 mr-1" />
+                                      Edit
+                                    </Button>
+                                  </Link>
+                                  <Link href={`/itinerary/${itinerary.id}`}>
+                                    <Button size="sm">View</Button>
+                                  </Link>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-10">
+                        <Package className="h-16 w-16 text-neutral-dark/30 mx-auto mb-4" />
+                        <p className="text-neutral-dark mb-4">No itineraries created yet.</p>
+                        <Link href="/itinerary/new">
+                          <Button>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create Your First Itinerary
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="messages" className="mt-0 space-y-6" forceMount={activeTab === "messages"}>
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Client Communication</CardTitle>
+                      <Link href="/messages">
+                        <Button>
+                          Open Message Center
+                        </Button>
+                      </Link>
+                    </div>
+                    <CardDescription>
+                      Chat with travelers, send updates and notifications
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingMessages ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      </div>
+                    ) : messages && messages.length > 0 ? (
+                      <div className="space-y-4">
+                        {messages.slice(0, 5).map((message, index) => (
+                          <div key={index} className="flex items-start p-3 bg-background rounded-lg">
+                            <Avatar className="h-10 w-10 mr-3 mt-1">
+                              <AvatarFallback>
+                                {message.senderId === user?.id ? "Me" : "C" + message.senderId}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="font-medium">
+                                  {message.senderId === user?.id 
+                                    ? `You → Client #${message.receiverId}` 
+                                    : `Client #${message.senderId}`}
+                                </div>
+                                <div className="text-xs text-neutral-dark">
+                                  {new Date(message.sentAt).toLocaleString()}
+                                </div>
+                              </div>
+                              <p className="text-sm text-neutral-dark">
+                                {message.content}
+                              </p>
+                              {!message.isRead && message.receiverId === user?.id && (
+                                <Badge variant="secondary" className="mt-2">
+                                  Unread
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-10">
+                        <MessageCircle className="h-16 w-16 text-neutral-dark/30 mx-auto mb-4" />
+                        <p className="text-neutral-dark">No messages yet.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="analytics" className="mt-0 space-y-6" forceMount={activeTab === "analytics"}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Reports & Analytics</CardTitle>
+                    <CardDescription>
+                      View revenue, booking trends, and most popular packages
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                      <Card>
+                        <CardContent className="p-4">
+                          <h3 className="text-sm font-medium text-neutral-dark mb-2">
+                            Total Revenue
+                          </h3>
+                          <p className="text-2xl font-bold">${revenueData.total}</p>
+                          <Progress value={85} className="h-1 mt-2" />
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4">
+                          <h3 className="text-sm font-medium text-neutral-dark mb-2">
+                            This Month
+                          </h3>
+                          <p className="text-2xl font-bold">${revenueData.thisMonth}</p>
+                          <div className="flex items-center mt-2">
+                            <Progress value={65} className="h-1 flex-1" />
+                            <span className="text-xs text-emerald-600 ml-2">
+                              +17%
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4">
+                          <h3 className="text-sm font-medium text-neutral-dark mb-2">
+                            Last Month
+                          </h3>
+                          <p className="text-2xl font-bold">${revenueData.lastMonth}</p>
+                          <Progress value={55} className="h-1 mt-2" />
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4">
+                          <h3 className="text-sm font-medium text-neutral-dark mb-2">
+                            Pending
+                          </h3>
+                          <p className="text-2xl font-bold">${revenueData.pending}</p>
+                          <Progress value={35} className="h-1 mt-2" />
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <h3 className="font-semibold text-lg mb-4">Popular Packages</h3>
+                    <div className="space-y-4">
+                      {travelPackages
+                        .sort((a, b) => b.bookings - a.bookings)
+                        .map((pkg) => (
+                          <div
+                            key={pkg.id}
+                            className="flex items-center justify-between py-3 border-b last:border-0"
+                          >
+                            <div className="flex items-center">
+                              <div className="bg-primary/10 p-2 rounded-full mr-3">
+                                <Package className="h-5 w-5 text-primary" />
+                              </div>
                               <div>
-                                <p className="text-sm text-neutral-dark">Requested</p>
-                                <p className="font-medium">
-                                  {new Date(preference.createdAt).toLocaleDateString()}
+                                <h4 className="font-medium">{pkg.title}</h4>
+                                <p className="text-sm text-neutral-dark">
+                                  {pkg.duration} • ${pkg.price}
                                 </p>
                               </div>
                             </div>
-                            
-                            <div className="mb-4">
-                              <p className="text-sm text-neutral-dark mb-2">Travel Styles</p>
-                              <div className="flex flex-wrap gap-2">
-                                {preference.travelStyles.map((style, i) => (
-                                  <Badge key={i} variant="secondary">{style}</Badge>
-                                ))}
+                            <div className="text-right">
+                              <div className="font-bold">{pkg.bookings}</div>
+                              <div className="text-xs text-neutral-dark">
+                                bookings
                               </div>
-                            </div>
-                            
-                            {preference.additionalInfo && (
-                              <div className="mb-4">
-                                <p className="text-sm text-neutral-dark mb-1">Additional Information</p>
-                                <p className="text-neutral-dark">{preference.additionalInfo}</p>
-                              </div>
-                            )}
-                            
-                            <div className="flex justify-end">
-                              <Button onClick={(e) => {
-                                e.stopPropagation();
-                                handleTripPreferenceSelect(preference);
-                              }}>
-                                Create Itinerary
-                              </Button>
                             </div>
                           </div>
                         ))}
                     </div>
-                  ) : (
-                    <div className="text-center py-10 bg-neutral-light rounded-lg">
-                      <p className="text-neutral-dark">No new trip requests at the moment.</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="payments" className="mt-0 space-y-6" forceMount={activeTab === "payments"}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Payments Tracking</CardTitle>
+                    <CardDescription>
+                      Track received and pending payments from travelers
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center space-x-2">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-dark" />
+                          <input
+                            type="text"
+                            placeholder="Search payments..."
+                            className="pl-9 pr-4 py-2 border rounded-md w-64"
+                          />
+                        </div>
+                        <Button variant="outline" size="sm">
+                          <Filter className="mr-2 h-4 w-4" />
+                          Filter
+                        </Button>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm">
+                          Download Report
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            {/* Itineraries Tab */}
-            <TabsContent value="itineraries">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
-                  <Card className="mb-8">
-                    <CardHeader>
-                      <CardTitle>Active Itineraries</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {isLoadingItineraries ? (
-                        <div className="flex justify-center py-8">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                      ) : isItinerariesError ? (
-                        <div className="text-center py-6">
-                          <p className="text-neutral-dark">Failed to load itineraries. Please try again later.</p>
-                        </div>
-                      ) : confirmedItineraries.length > 0 ? (
-                        <div className="space-y-4">
-                          {confirmedItineraries.map((itinerary, index) => (
-                            <div 
-                              key={index} 
-                              className="bg-neutral-light rounded-lg p-4 flex flex-col md:flex-row justify-between items-start md:items-center cursor-pointer hover:bg-neutral-medium/50 transition-colors"
-                              onClick={() => setLocation(`/itinerary/${itinerary.id}`)}
-                            >
-                              <div className="mb-3 md:mb-0">
-                                <h3 className="font-medium">{itinerary.title}</h3>
-                                <div className="flex flex-col sm:flex-row sm:items-center text-sm text-neutral-dark mt-1">
-                                  <div className="flex items-center">
-                                    <User className="h-4 w-4 mr-1" />
-                                    <span>Traveler ID: {itinerary.travelerId}</span>
-                                  </div>
-                                  <span className="hidden sm:inline mx-2">•</span>
-                                  <div className="flex items-center mt-1 sm:mt-0">
-                                    <CreditCard className="h-4 w-4 mr-1" />
-                                    <span>${itinerary.totalPrice.toLocaleString()}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center">
-                                <Badge variant={itinerary.status === "completed" ? "secondary" : "default"}>
-                                  {itinerary.status.charAt(0).toUpperCase() + itinerary.status.slice(1)}
+                    
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left pb-3 font-medium">ID</th>
+                            <th className="text-left pb-3 font-medium">Client</th>
+                            <th className="text-left pb-3 font-medium">Package</th>
+                            <th className="text-left pb-3 font-medium">Amount</th>
+                            <th className="text-left pb-3 font-medium">Date</th>
+                            <th className="text-left pb-3 font-medium">Status</th>
+                            <th className="text-right pb-3 font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentBookings.map((booking, i) => (
+                            <tr key={i} className="border-b last:border-0">
+                              <td className="py-3">PAY-{1000 + i}</td>
+                              <td className="py-3">{booking.travelerName}</td>
+                              <td className="py-3">
+                                {travelPackages[i % travelPackages.length].title}
+                              </td>
+                              <td className="py-3">${booking.amount}</td>
+                              <td className="py-3">
+                                {new Date(booking.startDate).toLocaleDateString()}
+                              </td>
+                              <td className="py-3">
+                                <Badge
+                                  variant={
+                                    i === 1 ? "warning" : "success"
+                                  }
+                                >
+                                  {i === 1 ? "Pending" : "Completed"}
                                 </Badge>
-                              </div>
-                            </div>
+                              </td>
+                              <td className="py-3 text-right">
+                                <Button variant="ghost" size="icon">
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
                           ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 bg-neutral-light rounded-lg">
-                          <p className="text-neutral-dark">No active itineraries at the moment.</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Pending Proposals</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {isLoadingItineraries ? (
-                        <div className="flex justify-center py-8">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                      ) : isItinerariesError ? (
-                        <div className="text-center py-6">
-                          <p className="text-neutral-dark">Failed to load proposals. Please try again later.</p>
-                        </div>
-                      ) : proposedItineraries.length > 0 ? (
-                        <div className="space-y-4">
-                          {proposedItineraries.map((itinerary, index) => (
-                            <div 
-                              key={index} 
-                              className="bg-neutral-light rounded-lg p-4 flex flex-col md:flex-row justify-between items-start md:items-center cursor-pointer hover:bg-neutral-medium/50 transition-colors"
-                              onClick={() => setLocation(`/itinerary/${itinerary.id}`)}
-                            >
-                              <div className="mb-3 md:mb-0">
-                                <h3 className="font-medium">{itinerary.title}</h3>
-                                <div className="flex flex-col sm:flex-row sm:items-center text-sm text-neutral-dark mt-1">
-                                  <div className="flex items-center">
-                                    <Calendar className="h-4 w-4 mr-1" />
-                                    <span>Proposed {new Date(itinerary.updatedAt).toLocaleDateString()}</span>
-                                  </div>
-                                  <span className="hidden sm:inline mx-2">•</span>
-                                  <div className="flex items-center mt-1 sm:mt-0">
-                                    <CreditCard className="h-4 w-4 mr-1" />
-                                    <span>${itinerary.totalPrice.toLocaleString()}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                                Awaiting Response
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 bg-neutral-light rounded-lg">
-                          <p className="text-neutral-dark">No pending proposals at the moment.</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="lg:col-span-1">
-                  <Card className="mb-8">
-                    <CardHeader>
-                      <CardTitle>Drafts</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {isLoadingItineraries ? (
-                        <div className="flex justify-center py-8">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                      ) : isItinerariesError ? (
-                        <div className="text-center py-6">
-                          <p className="text-neutral-dark">Failed to load drafts. Please try again later.</p>
-                        </div>
-                      ) : draftItineraries.length > 0 ? (
-                        <div className="space-y-4">
-                          {draftItineraries.map((itinerary, index) => (
-                            <div 
-                              key={index} 
-                              className="bg-neutral-light rounded-lg p-4 cursor-pointer hover:bg-neutral-medium/50 transition-colors"
-                              onClick={() => setLocation(`/itinerary/${itinerary.id}`)}
-                            >
-                              <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-medium">{itinerary.title}</h3>
-                                <Badge variant="outline">Draft</Badge>
-                              </div>
-                              <p className="text-sm text-neutral-dark mb-3 line-clamp-2">{itinerary.description}</p>
-                              <div className="flex justify-between items-center text-sm">
-                                <div className="flex items-center">
-                                  <Clock className="h-4 w-4 mr-1 text-neutral-dark" />
-                                  <span className="text-neutral-dark">
-                                    {new Date(itinerary.updatedAt).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <span className="text-primary font-medium">Continue Editing</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-6 bg-neutral-light rounded-lg">
-                          <p className="text-neutral-dark">No draft itineraries.</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Performance Stats</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className="bg-primary/10 p-2 rounded-full mr-3">
-                              <Check className="h-4 w-4 text-primary" />
-                            </div>
-                            <span>Acceptance Rate</span>
-                          </div>
-                          <span className="font-medium">
-                            {itineraries && itineraries.length > 0 
-                              ? `${Math.round((confirmedItineraries.length / proposedItineraries.length) * 100) || 0}%` 
-                              : "N/A"}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className="bg-primary/10 p-2 rounded-full mr-3">
-                              <BarChart2 className="h-4 w-4 text-primary" />
-                            </div>
-                            <span>Average Trip Value</span>
-                          </div>
-                          <span className="font-medium">
-                            {confirmedItineraries.length > 0 
-                              ? `$${Math.round(confirmedItineraries.reduce((sum, i) => sum + i.totalPrice, 0) / confirmedItineraries.length).toLocaleString()}` 
-                              : "$0"}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className="bg-primary/10 p-2 rounded-full mr-3">
-                              <Clock className="h-4 w-4 text-primary" />
-                            </div>
-                            <span>Response Time</span>
-                          </div>
-                          <span className="font-medium">24 hrs</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-            
-            {/* Messages Tab */}
-            <TabsContent value="messages">
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle>Traveler Messages</CardTitle>
-                    <Button onClick={() => setLocation('/messages')}>Open Inbox</Button>
-                  </div>
-                  <CardDescription>
-                    Messages from travelers interested in your services
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingMessages ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </tbody>
+                      </table>
                     </div>
-                  ) : isMessagesError ? (
-                    <div className="text-center py-6">
-                      <p className="text-neutral-dark">Failed to load messages. Please try again later.</p>
-                    </div>
-                  ) : messages && messages.length > 0 ? (
-                    <div className="space-y-4">
-                      {/* Group messages by sender/receiver for a conversation view */}
-                      {Array.from(new Set(messages.map(m => 
-                        m.senderId === user.id ? m.receiverId : m.senderId
-                      ))).slice(0, 5).map((contactId) => {
-                        const contactMessages = messages.filter(m => 
-                          m.senderId === contactId || m.receiverId === contactId
-                        ).sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
-                        
-                        const latestMessage = contactMessages[0];
-                        const unreadCount = contactMessages.filter(m => 
-                          !m.isRead && m.receiverId === user.id
-                        ).length;
-                        
-                        return (
-                          <div 
-                            key={contactId} 
-                            className="bg-neutral-light rounded-lg p-4 flex justify-between items-center cursor-pointer hover:bg-neutral-medium/50 transition-colors"
-                            onClick={() => setLocation(`/messages/${contactId}`)}
-                          >
-                            <div className="flex items-center">
-                              <Avatar className="h-10 w-10 mr-3">
-                                <AvatarFallback>
-                                  {/* In a real app, we would fetch the contact's details */}
-                                  {contactId.toString().charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="flex items-center">
-                                  <h3 className="font-medium mr-2">Traveler #{contactId}</h3>
-                                  {unreadCount > 0 && (
-                                    <Badge className="bg-primary text-white">{unreadCount}</Badge>
-                                  )}
-                                </div>
-                                <p className="text-sm text-neutral-dark line-clamp-1">
-                                  {latestMessage.content.length > 40 
-                                    ? `${latestMessage.content.substring(0, 40)}...` 
-                                    : latestMessage.content}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-xs text-neutral-dark">
-                              {new Date(latestMessage.sentAt).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric'
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10 bg-neutral-light rounded-lg">
-                      <p className="text-neutral-dark">You don't have any messages yet.</p>
-                    </div>
-                  )}
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full" onClick={() => setLocation('/messages')}>
-                    View All Messages
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-            
-            {/* Profile Tab */}
-            <TabsContent value="profile">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1">
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col items-center">
-                        <Avatar className="h-24 w-24 mb-4">
-                          {user.profilePicture ? (
-                            <AvatarImage src={user.profilePicture} alt={user.fullName} />
-                          ) : (
-                            <AvatarFallback className="text-2xl">{getInitials(user.fullName)}</AvatarFallback>
-                          )}
-                        </Avatar>
-                        <h2 className="text-xl font-bold mb-1">{user.fullName}</h2>
-                        <p className="text-neutral-dark mb-2">{user.email}</p>
-                        <Badge className="mb-4 capitalize">{user.role}</Badge>
-                        <Button variant="outline" className="w-full mb-4">Edit Profile</Button>
-                        <Button variant="outline" className="w-full">View Public Profile</Button>
-                      </div>
-                      
-                      <Separator className="my-6" />
-                      
-                      {/* Quick Stats */}
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-neutral-dark">Completed Trips</span>
-                          <span className="font-medium">
-                            {confirmedItineraries.filter(i => i.status === "completed").length}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-neutral-dark">Active Itineraries</span>
-                          <span className="font-medium">
-                            {confirmedItineraries.filter(i => i.status === "confirmed").length}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-neutral-dark">Pending Proposals</span>
-                          <span className="font-medium">{proposedItineraries.length}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-neutral-dark">Drafts</span>
-                          <span className="font-medium">{draftItineraries.length}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="lg:col-span-2">
-                  <Card className="mb-8">
-                    <CardHeader>
-                      <CardTitle>Agent Profile Details</CardTitle>
-                      <CardDescription>Update your professional profile information</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        {/* Basic Information */}
-                        <div>
-                          <h3 className="font-medium mb-4">Basic Information</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm text-neutral-dark mb-1">Full Name</label>
-                              <Input defaultValue={user.fullName} />
-                            </div>
-                            <div>
-                              <label className="block text-sm text-neutral-dark mb-1">Email</label>
-                              <Input defaultValue={user.email} />
-                            </div>
-                            <div>
-                              <label className="block text-sm text-neutral-dark mb-1">Specialization</label>
-                              <Input placeholder="e.g., Luxury Travel, Adventure Tours" />
-                            </div>
-                            <div>
-                              <label className="block text-sm text-neutral-dark mb-1">Years of Experience</label>
-                              <Input type="number" min="0" placeholder="e.g., 5" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <Separator />
-                        
-                        {/* Professional Details */}
-                        <div>
-                          <h3 className="font-medium mb-4">Professional Details</h3>
-                          <div className="grid grid-cols-1 gap-4">
-                            <div>
-                              <label className="block text-sm text-neutral-dark mb-1">Bio</label>
-                              <Textarea 
-                                placeholder="Tell travelers about your expertise and experience..."
-                                className="min-h-24"
-                                defaultValue={user.bio || ""}
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm text-neutral-dark mb-1">Languages</label>
-                              <Input placeholder="e.g., English, Spanish, French" />
-                            </div>
-                            <div>
-                              <label className="block text-sm text-neutral-dark mb-1">Regions of Expertise</label>
-                              <Input placeholder="e.g., Europe, Southeast Asia, Caribbean" />
-                            </div>
-                            <div>
-                              <label className="block text-sm text-neutral-dark mb-1">Travel Styles</label>
-                              <Input placeholder="e.g., Adventure, Luxury, Family, Cultural" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-end">
-                          <Button>Save Profile Changes</Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Account Settings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        {/* Notification Settings */}
-                        <div>
-                          <h3 className="font-medium mb-4">Notification Preferences</h3>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium">Email Notifications</p>
-                                <p className="text-sm text-neutral-dark">Receive updates about new trip requests</p>
-                              </div>
-                              <input type="checkbox" defaultChecked className="toggle toggle-primary" />
-                            </div>
-                            
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium">Message Alerts</p>
-                                <p className="text-sm text-neutral-dark">Get notified about new messages</p>
-                              </div>
-                              <input type="checkbox" defaultChecked className="toggle toggle-primary" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <Separator />
-                        
-                        {/* Security Settings */}
-                        <div>
-                          <h3 className="font-medium mb-4">Security</h3>
-                          <Button variant="outline">Change Password</Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </div>
+          </div>
         </div>
       </main>
       <Footer />
-      
-      {/* Create Itinerary Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Itinerary</DialogTitle>
-            <DialogDescription>
-              {selectedTripPreference && (
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <Badge variant="outline">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {selectedTripPreference.destination}
-                  </Badge>
-                  <Badge variant="outline">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {new Date(selectedTripPreference.startDate).toLocaleDateString()} - {new Date(selectedTripPreference.endDate).toLocaleDateString()}
-                  </Badge>
-                  <Badge variant="outline" className="capitalize">
-                    <CreditCard className="h-3 w-3 mr-1" />
-                    {selectedTripPreference.budget}
-                  </Badge>
-                </div>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleCreateItinerary)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Itinerary Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., European Adventure - 10 Days" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="totalPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Total Price ($)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="Total cost in USD" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Describe the itinerary and its highlights..."
-                        className="min-h-24"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="proposed">Propose to Traveler</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Save as draft to edit later, or propose to send to the traveler for review
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div>
-                <h3 className="font-medium mb-4">Daily Itinerary</h3>
-                <div className="space-y-6">
-                  {itineraryDetails.map((day, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <h4 className="font-medium">Day {day.day}</h4>
-                        {itineraryDetails.length > 1 && (
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => removeItineraryDay(index)}
-                          >
-                            Remove Day
-                          </Button>
-                        )}
-                      </div>
-                      
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          <label className="block text-sm text-neutral-dark mb-1">Activities</label>
-                          <Textarea
-                            placeholder="Describe the day's activities, sightseeing, experiences..."
-                            value={day.activities}
-                            onChange={(e) => updateItineraryDay(index, 'activities', e.target.value)}
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <label className="block text-sm text-neutral-dark mb-1">Accommodation</label>
-                            <Input
-                              placeholder="Where will they stay?"
-                              value={day.accommodation}
-                              onChange={(e) => updateItineraryDay(index, 'accommodation', e.target.value)}
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm text-neutral-dark mb-1">Meals</label>
-                            <Input
-                              placeholder="e.g., Breakfast included"
-                              value={day.meals}
-                              onChange={(e) => updateItineraryDay(index, 'meals', e.target.value)}
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm text-neutral-dark mb-1">Transportation</label>
-                            <Input
-                              placeholder="e.g., Private transfer"
-                              value={day.transportation}
-                              onChange={(e) => updateItineraryDay(index, 'transportation', e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addItineraryDay}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Another Day
-                  </Button>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Create Itinerary</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
-};
-
-export default AgentDashboardPage;
+}
