@@ -73,18 +73,11 @@ const MobileMenu = ({ isOpen, onClose, user, onLogout }: MobileMenuProps) => {
               Log Out
             </Button>
           ) : (
-            <>
-              <Link href="/auth">
-                <Button variant="outline" onClick={onClose} className="w-full">
-                  Log In
-                </Button>
-              </Link>
-              <Link href="/auth">
-                <Button onClick={onClose} className="w-full">
-                  Sign Up
-                </Button>
-              </Link>
-            </>
+            <Link href="/auth">
+              <Button onClick={onClose} className="w-full">
+                Log In / Sign Up
+              </Button>
+            </Link>
           )}
         </div>
       </div>

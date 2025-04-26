@@ -89,14 +89,9 @@ const Header = () => {
                 </Button>
               </div>
             ) : (
-              <>
-                <Link href="/auth" className="hidden md:inline-flex">
-                  <Button variant="outline">Log In</Button>
-                </Link>
-                <Link href="/auth" className="inline-flex">
-                  <Button>Sign Up</Button>
-                </Link>
-              </>
+              <Link href="/auth" className="inline-flex">
+                <Button>Log In / Sign Up</Button>
+              </Link>
             )}
             <Button 
               variant="ghost" 
