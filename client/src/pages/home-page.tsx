@@ -58,11 +58,20 @@ const HomePage = () => {
                 Connect with expert travel agents who craft personalized itineraries using AI-powered recommendations. Experience travel planning reimagined.
               </p>
               <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                <Link href="/agents">
-                  <Button size="lg" className="px-8 font-medium">
-                    Find Travel Agents
-                  </Button>
-                </Link>
+                {(!user || user.role !== "agent") && (
+                  <Link href="/agents">
+                    <Button size="lg" className="px-8 font-medium">
+                      Find Travel Agents
+                    </Button>
+                  </Link>
+                )}
+                {user && user.role === "agent" && (
+                  <Link href="/dashboard/agent">
+                    <Button size="lg" className="px-8 font-medium">
+                      Go to Dashboard
+                    </Button>
+                  </Link>
+                )}
                 {!user && (
                   <Link href="/auth">
                     <Button size="lg" variant="outline" className="px-8 font-medium">
@@ -75,13 +84,66 @@ const HomePage = () => {
           </div>
         </section>
 
-        {/* Search Form */}
+        {/* Search Form for travelers, Agent Stats for agents */}
         <section className="py-14 bg-white">
           <div className="container mx-auto px-4">
-            <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 -mt-20 relative z-20">
-              <h2 className="text-2xl font-bold mb-6 text-center">Find Your Perfect Travel Experience</h2>
-              <SearchForm />
-            </div>
+            {user && user.role === "agent" ? (
+              <div className="max-w-5xl mx-auto bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl shadow-lg p-6 md:p-8 -mt-20 relative z-20 border border-blue-100">
+                <h2 className="text-2xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">Agent Dashboard Overview</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white p-5 rounded-lg shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-700">Active Bookings</h3>
+                      <div className="bg-blue-100 w-10 h-10 rounded-full flex items-center justify-center">
+                        <CalendarClock className="h-5 w-5 text-blue-600" />
+                      </div>
+                    </div>
+                    <p className="text-3xl font-bold mt-2">12</p>
+                    <p className="text-sm text-gray-500 mt-1">4 need attention</p>
+                  </div>
+                  
+                  <div className="bg-white p-5 rounded-lg shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-700">New Messages</h3>
+                      <div className="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="text-3xl font-bold mt-2">7</p>
+                    <p className="text-sm text-gray-500 mt-1">3 from new clients</p>
+                  </div>
+                  
+                  <div className="bg-white p-5 rounded-lg shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-700">Revenue</h3>
+                      <div className="bg-green-100 w-10 h-10 rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="text-3xl font-bold mt-2">$8,245</p>
+                    <p className="text-sm text-green-500 mt-1">↑ 12% from last month</p>
+                  </div>
+                </div>
+                
+                <div className="mt-6 flex justify-center">
+                  <Link href="/dashboard/agent">
+                    <Button className="px-8">
+                      Go to Full Dashboard
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 -mt-20 relative z-20">
+                <h2 className="text-2xl font-bold mb-6 text-center">Find Your Perfect Travel Experience</h2>
+                <SearchForm />
+              </div>
+            )}
           </div>
         </section>
 
@@ -154,11 +216,17 @@ const HomePage = () => {
                       {destination.name}
                     </h3>
                     <p className="text-gray-600 mb-4">{destination.description}</p>
-                    <Link href="/agents">
-                      <Button variant="outline" size="sm">
-                        Find Specialists
+                    {(!user || user.role !== "agent") ? (
+                      <Link href="/agents">
+                        <Button variant="outline" size="sm">
+                          Find Specialists
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button variant="outline" size="sm" className="opacity-75">
+                        Popular Destination
                       </Button>
-                    </Link>
+                    )}
                   </div>
                 </div>
               ))}
@@ -215,23 +283,36 @@ const HomePage = () => {
               )}
             </div>
             
-            <div className="text-center mt-12">
-              <Link href="/agents">
-                <Button variant="outline" size="lg">
-                  View All Agents
-                </Button>
-              </Link>
-            </div>
+            {(!user || user.role !== "agent") && (
+              <div className="text-center mt-12">
+                <Link href="/agents">
+                  <Button variant="outline" size="lg">
+                    View All Agents
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </section>
 
         {/* CTA Section */}
         <section className="py-16 md:py-24 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Plan Your Dream Trip?</h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-              Join TravelBuddy today and connect with expert travel agents who will create your perfect itinerary.
-            </p>
+            {user && user.role === "agent" ? (
+              <>
+                <h2 className="text-3xl md:text-4xl font-bold mb-6">Grow Your Travel Business</h2>
+                <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
+                  Use our platform to connect with travelers, manage bookings, and increase your revenue with our powerful agent tools.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Plan Your Dream Trip?</h2>
+                <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
+                  Join TravelBuddy today and connect with expert travel agents who will create your perfect itinerary.
+                </p>
+              </>
+            )}
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               {!user && (
                 <Link href="/auth">
@@ -240,11 +321,20 @@ const HomePage = () => {
                   </Button>
                 </Link>
               )}
-              <Link href="/agents">
-                <Button size="lg" variant="outline" className="px-8 font-medium border-white text-white hover:bg-blue-700">
-                  Browse Agents
-                </Button>
-              </Link>
+              {(!user || user.role !== "agent") && (
+                <Link href="/agents">
+                  <Button size="lg" variant="outline" className="px-8 font-medium border-white text-white hover:bg-blue-700">
+                    Browse Agents
+                  </Button>
+                </Link>
+              )}
+              {user && user.role === "agent" && (
+                <Link href="/dashboard/agent">
+                  <Button size="lg" className="px-8 font-medium bg-white text-blue-600 hover:bg-gray-100">
+                    Manage Your Listings
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </section>
