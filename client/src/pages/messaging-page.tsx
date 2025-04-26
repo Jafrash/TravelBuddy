@@ -11,9 +11,20 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+//import { useWebSocket } from "../hooks/use-websocket";
+// Temporary mock until WebSocket is fixed
+const useWebSocket = (userId: number | null) => {
+  return {
+    isConnected: false,
+    isConnecting: false,
+    messages: [],
+    sendMessage: (receiverId: number, content: string) => false,
+    connect: () => {}
+  };
+};
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Message, User } from "@shared/schema";
-import { Loader2, Send, User as UserIcon, Clock, MailOpen, Mail } from "lucide-react";
+import { Loader2, Send, User as UserIcon, Clock, MailOpen, Mail, WifiOff } from "lucide-react";
 
 const MessagingPage = () => {
   const { receiverId } = useParams<{ receiverId?: string }>();
@@ -24,6 +35,9 @@ const MessagingPage = () => {
   const [activeContact, setActiveContact] = useState<number | null>(
     receiverId ? parseInt(receiverId) : null
   );
+  
+  // Initialize WebSocket connection if user is authenticated
+  const { isConnected, sendMessage } = useWebSocket(user?.id || null);
 
   // Fetch messages
   const {
@@ -85,9 +99,15 @@ const MessagingPage = () => {
       const contactMessages = messages.filter(msg => 
         msg.senderId === contactId || msg.receiverId === contactId
       );
-      const lastMessage = contactMessages.sort((a, b) => 
-        new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()
-      )[0];
+      
+      // Safe date comparison 
+      const sortedMessages = [...contactMessages].sort((a, b) => {
+        const dateA = a.sentAt ? new Date(a.sentAt).getTime() : 0;
+        const dateB = b.sentAt ? new Date(b.sentAt).getTime() : 0;
+        return dateB - dateA;
+      });
+      
+      const lastMessage = sortedMessages[0];
       const unreadCount = contactMessages.filter(msg => 
         !msg.isRead && msg.receiverId === user.id
       ).length;
@@ -96,9 +116,11 @@ const MessagingPage = () => {
         id: contactId,
         lastMessage,
         unreadCount,
-        messages: contactMessages.sort((a, b) => 
-          new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
-        )
+        messages: [...contactMessages].sort((a, b) => {
+          const dateA = a.sentAt ? new Date(a.sentAt).getTime() : 0;
+          const dateB = b.sentAt ? new Date(b.sentAt).getTime() : 0;
+          return dateA - dateB;
+        })
       };
     });
   };
@@ -112,6 +134,19 @@ const MessagingPage = () => {
     if (!user || !activeContact || !messageText.trim()) return;
 
     try {
+      // If WebSocket is connected, send via WebSocket for real-time delivery
+      if (isConnected && user.id) {
+        const success = sendMessage(activeContact, messageText);
+        if (success) {
+          setMessageText("");
+          
+          // Refresh messages to see the new message immediately
+          setTimeout(() => refetchMessages(), 500);
+          return;
+        }
+      }
+      
+      // Fallback to REST API if WebSocket fails or is not connected
       await apiRequest("POST", "/api/messages", {
         receiverId: activeContact,
         content: messageText
@@ -133,12 +168,15 @@ const MessagingPage = () => {
     }
   };
 
-  const formatMessageTime = (dateString: string | Date) => {
+  const formatMessageTime = (dateString: string | Date | null) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatMessageDate = (dateString: string | Date) => {
+  const formatMessageDate = (dateString: string | Date | null) => {
+    if (!dateString) return "";
+    
     const date = new Date(dateString);
     const today = new Date();
     const yesterday = new Date(today);
@@ -273,21 +311,38 @@ const MessagingPage = () => {
                 {activeContact ? (
                   <>
                     <CardHeader className="px-6 py-4 border-b flex-shrink-0">
-                      <div className="flex items-center">
-                        <Avatar className="mr-3">
-                          <AvatarFallback>
-                            {getInitials(activeContact)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <CardTitle>
-                            {user.role === "traveler" ? `Agent #${activeContact}` : `Traveler #${activeContact}`}
-                          </CardTitle>
-                          <p className="text-sm text-neutral-dark">
-                            {activeMessages.length > 0 
-                              ? `${activeMessages.length} messages` 
-                              : "Start a conversation"}
-                          </p>
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center">
+                          <Avatar className="mr-3">
+                            <AvatarFallback>
+                              {getInitials(activeContact)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <CardTitle>
+                              {user.role === "traveler" ? `Agent #${activeContact}` : `Traveler #${activeContact}`}
+                            </CardTitle>
+                            <p className="text-sm text-neutral-dark">
+                              {activeMessages.length > 0 
+                                ? `${activeMessages.length} messages` 
+                                : "Start a conversation"}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Connection status indicator */}
+                        <div className="flex items-center">
+                          {isConnected ? (
+                            <div className="flex items-center text-xs text-emerald-600">
+                              <div className="w-2 h-2 rounded-full bg-emerald-500 mr-1"></div>
+                              <span>Real-time</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center text-xs text-gray-500">
+                              <WifiOff className="w-3 h-3 mr-1" />
+                              <span>Standard</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardHeader>

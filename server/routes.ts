@@ -6,6 +6,7 @@ import { insertTripPreferenceSchema, insertItinerarySchema, insertMessageSchema,
 import { z } from "zod";
 import path from "path";
 import { fileURLToPath } from "url";
+import { WebSocketServer, WebSocket } from "ws";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -286,6 +287,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server for real-time chat
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Client connection mapping
+  const clients = new Map<number, WebSocket>();
+  
+  wss.on('connection', (ws, req) => {
+    console.log('WebSocket client connected');
+    
+    // Handle receiving messages
+    ws.on('message', async (message) => {
+      try {
+        const parsedMessage = JSON.parse(message.toString());
+        
+        // Expected message format: { type: 'auth', userId: number } or { type: 'message', to: number, content: string }
+        if (parsedMessage.type === 'auth') {
+          // Authenticate and store the connection
+          const userId = parsedMessage.userId;
+          if (userId) {
+            clients.set(userId, ws);
+            console.log(`User ${userId} authenticated on WebSocket`);
+            
+            // Send confirmation
+            ws.send(JSON.stringify({ 
+              type: 'auth_success', 
+              message: 'Authentication successful' 
+            }));
+          }
+        } else if (parsedMessage.type === 'message') {
+          // Process and store the message
+          if (!parsedMessage.senderId || !parsedMessage.receiverId || !parsedMessage.content) {
+            ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Invalid message format' 
+            }));
+            return;
+          }
+          
+          // Store message in database
+          const messageData = {
+            senderId: parsedMessage.senderId,
+            receiverId: parsedMessage.receiverId,
+            content: parsedMessage.content,
+            isRead: false
+          };
+          
+          const savedMessage = await storage.createMessage(messageData);
+          
+          // Format the message for sending
+          const outgoingMessage = {
+            type: 'new_message',
+            message: savedMessage
+          };
+          
+          // Send to recipient if they're connected
+          const recipientWs = clients.get(parsedMessage.receiverId);
+          if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+            recipientWs.send(JSON.stringify(outgoingMessage));
+          }
+          
+          // Send confirmation to sender
+          ws.send(JSON.stringify({
+            type: 'message_sent',
+            messageId: savedMessage.id
+          }));
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+        ws.send(JSON.stringify({ 
+          type: 'error', 
+          message: 'Failed to process message' 
+        }));
+      }
+    });
+    
+    // Handle disconnection
+    ws.on('close', () => {
+      // Remove client from the connections map
+      clients.forEach((client, userId) => {
+        if (client === ws) {
+          clients.delete(userId);
+          console.log(`User ${userId} disconnected from WebSocket`);
+        }
+      });
+    });
+  });
 
   return httpServer;
 }
