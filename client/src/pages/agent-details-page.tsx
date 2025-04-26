@@ -242,10 +242,18 @@ const AgentDetailsPage = () => {
                           className="w-full h-24 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                           placeholder="Describe your travel plans and questions for this agent..."
                         ></textarea>
-                        <Button type="submit" className="w-full">
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          Send Message
-                        </Button>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button type="submit" className="w-full">
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Send Message
+                          </Button>
+                          <Link href="/messages">
+                            <Button variant="outline" className="w-full">
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              View Messages
+                            </Button>
+                          </Link>
+                        </div>
                       </form>
                     </>
                   )}
@@ -431,9 +439,17 @@ Their expertise in ${agent.travelStyles.join(", ")} travel ensures you'll get a 
                               </li>
                             </ul>
                             {user && user.role === "traveler" && (
-                              <Button variant="outline" className="w-full" onClick={() => setMessageDraft(`Hi ${agent.fullName}, I'm interested in your ${agent.regions.includes("Europe") ? "Classic Italian Journey" : "Cultural Exploration"} itinerary. Can you tell me more about it?`)}>
-                                Request Similar Itinerary
-                              </Button>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button variant="outline" className="w-full" onClick={() => setMessageDraft(`Hi ${agent.fullName}, I'm interested in your ${agent.regions.includes("Europe") ? "Classic Italian Journey" : "Cultural Exploration"} itinerary. Can you tell me more about it?`)}>
+                                  Request Itinerary
+                                </Button>
+                                <Link href="/messages">
+                                  <Button variant="secondary" className="w-full">
+                                    <MessageCircle className="h-4 w-4 mr-2" />
+                                    Messages
+                                  </Button>
+                                </Link>
+                              </div>
                             )}
                           </div>
                         </div>
