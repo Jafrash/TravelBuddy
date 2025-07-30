@@ -1,0 +1,303 @@
+import { pipeline } from '@xenova/transformers';
+import { createHash } from 'crypto';
+import { db } from '../db';
+import { itineraries, type InsertItinerary } from '@shared/schema';
+import { and, eq, sql } from 'drizzle-orm';
+import { CreateItinerary } from '@shared/itinerary.schema';
+
+// Define a type for the database itinerary row
+type DbItinerary = typeof itineraries.$inferInsert;
+
+export type ItineraryRequest = {
+  userId: number;
+  destination: string;
+  duration: number;
+  interests: string[];
+  budget: 'low' | 'medium' | 'high';
+};
+
+export class AIService {
+  private model: any;
+  private isInitialized = false;
+  private static instance: AIService;
+  private cache: Map<string, string> = new Map();
+  private rateLimitMap: Map<number, { lastRequest: number; count: number }> = new Map();
+  private readonly RATE_LIMIT = {
+    WINDOW_MS: 60 * 60 * 1000, // 1 hour
+    MAX_REQUESTS: 10, // Max requests per hour per user
+  };
+
+  private constructor() {}
+
+  public static getInstance(): AIService {
+    if (!AIService.instance) {
+      AIService.instance = new AIService();
+    }
+    return AIService.instance;
+  }
+
+  async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+    
+    console.log('🚀 Initializing AI model (this may take a minute)...');
+    
+    try {
+      // Using a small model that works well on CPU
+      this.model = await pipeline(
+        'text2text-generation',
+        'Xenova/LaMini-Flan-T5-248M',
+        {
+          quantized: true,
+          progress_callback: (progress: any) => {
+            if (progress.status === 'progress') {
+              console.log(`Downloading model: ${Math.round(progress.loaded / progress.total * 100)}%`);
+            }
+          }
+        }
+      );
+      this.isInitialized = true;
+      console.log('✅ AI model ready!');
+    } catch (error) {
+      console.error('❌ Failed to initialize AI model. Falling back to mock responses.');
+      console.error('Error details:', error);
+      // Don't throw, just continue with mock responses
+      this.isInitialized = true; // Mark as initialized to prevent repeated errors
+    }
+  }
+
+  async generateItinerary(request: ItineraryRequest): Promise<string> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    // Check rate limits
+    this.checkRateLimit(request.userId);
+    
+    // Try to get from cache first
+    const cacheKey = this.getCacheKey(request);
+    const cachedResponse = this.cache.get(cacheKey);
+    if (cachedResponse) {
+      console.log(`[AIService] Returning cached response for user ${request.userId}`);
+      return cachedResponse;
+    }
+
+    // Try to get from database
+    const dbItinerary = await this.getItineraryFromDb(request);
+    if (dbItinerary?.content) {
+      console.log(`[AIService] Returning database-stored itinerary for user ${request.userId}`);
+      this.cache.set(cacheKey, dbItinerary.content);
+      return dbItinerary.content;
+    }
+
+    // If model failed to initialize, return a mock response
+    if (!this.model) {
+      console.log('[AIService] AI model not available, returning mock response');
+      return this.generateMockItinerary(request);
+    }
+
+    try {
+      console.log(`[AIService] Generating new itinerary for user ${request.userId}`);
+      const prompt = await this.buildPrompt(request);
+      
+      const output = await this.model(prompt, {
+        max_new_tokens: 1000,
+        temperature: 0.7,
+        do_sample: true,
+        top_k: 50,
+        top_p: 0.9,
+      });
+      
+      if (!output?.[0]?.generated_text) {
+        console.log('[AIService] No response from AI model, falling back to mock response');
+        return this.generateMockItinerary(request);
+      }
+      
+      const content = output[0].generated_text;
+      
+      // Cache the response
+      this.cache.set(cacheKey, content);
+      
+      try {
+        // Save to database
+        await this.saveItineraryToDb({
+          ...request,
+          content,
+        });
+      } catch (dbError) {
+        console.error('[AIService] Warning: Failed to save itinerary to DB, but continuing:', dbError);
+        // Continue even if saving to DB fails
+      }
+      
+      return content;
+    } catch (error) {
+      console.error('[AIService] Error generating itinerary, falling back to mock response:', error);
+      return this.generateMockItinerary(request);
+    }
+  }
+
+  private async getItineraryFromDb(request: ItineraryRequest): Promise<{ content: string } | null> {
+    try {
+      const result = await db.execute(sql`
+        SELECT details->'content' as content 
+        FROM itineraries 
+        WHERE 
+          "travelerId" = ${request.userId} AND 
+          details->>'destination' = ${request.destination} AND 
+          (details->>'duration')::int = ${request.duration}
+        LIMIT 1
+      `);
+      
+      const rows = result.rows as Array<{ content: string }>;
+      return rows[0] || null;
+    } catch (error) {
+      console.error('[AIService] Error fetching itinerary from DB:', error);
+      return null;
+    }
+  }
+
+  private async saveItineraryToDb(itinerary: CreateItinerary): Promise<void> {
+    try {
+      const dbItinerary: DbItinerary = {
+        travelerId: itinerary.userId,
+        agentId: 1, // Default agent ID
+        tripPreferenceId: 1, // Default preference ID
+        title: `Trip to ${itinerary.destination} (${itinerary.duration} days)`,
+        description: `AI-generated itinerary for ${itinerary.destination}`,
+        totalPrice: 0,
+        status: 'generated',
+        details: {
+          destination: itinerary.destination,
+          duration: itinerary.duration,
+          budget: itinerary.budget,
+          interests: itinerary.interests,
+          content: itinerary.content
+        },
+        createdAt: undefined,
+        updatedAt: undefined
+      };
+
+      await db.execute(sql`
+        INSERT INTO itineraries (
+          "travelerId", "agentId", "tripPreferenceId", "title", 
+          "description", "totalPrice", "status", "details"
+        ) VALUES (
+          ${dbItinerary.travelerId}, 
+          ${dbItinerary.agentId}, 
+          ${dbItinerary.tripPreferenceId}, 
+          ${dbItinerary.title},
+          ${dbItinerary.description},
+          ${dbItinerary.totalPrice},
+          ${dbItinerary.status},
+          ${dbItinerary.details}::jsonb
+        )
+      `);
+    } catch (error) {
+      console.error('[AIService] Error saving itinerary to DB:', error);
+      throw error;
+    }
+  }
+
+  private checkRateLimit(userId: number): void {
+    const now = Date.now();
+    const userLimit = this.rateLimitMap.get(userId) || { 
+      lastRequest: 0, 
+      count: 0 
+    };
+
+    // Reset counter if window has passed
+    if (now - userLimit.lastRequest > this.RATE_LIMIT.WINDOW_MS) {
+      userLimit.count = 0;
+      userLimit.lastRequest = now;
+    }
+
+    // Check if user has exceeded rate limit
+    if (userLimit.count >= this.RATE_LIMIT.MAX_REQUESTS) {
+      const timeLeft = Math.ceil((userLimit.lastRequest + this.RATE_LIMIT.WINDOW_MS - now) / 1000 / 60);
+      throw new Error(`Rate limit exceeded. Please try again in ${timeLeft} minutes.`);
+    }
+
+    // Increment counter
+    userLimit.count++;
+    this.rateLimitMap.set(userId, userLimit);
+  }
+
+  private getCacheKey(request: ItineraryRequest): string {
+    const str = JSON.stringify({
+      userId: request.userId,
+      destination: request.destination.toLowerCase().trim(),
+      duration: request.duration,
+      interests: [...request.interests].sort()
+    });
+    
+    return createHash('md5').update(str).digest('hex');
+  }
+
+  private async buildPrompt(request: ItineraryRequest): Promise<string> {
+    const userContext = await this.getUserContext(request.userId);
+    
+    return `
+    Create a personalized travel itinerary for ${userContext.fullName || 'the traveler'} with the following details:
+    - Destination: ${request.destination}
+    - Duration: ${request.duration} days
+    - Interests: ${request.interests.join(', ')}
+    - Budget: ${request.budget}
+    ${userContext.preferences?.travelStyle ? `- Travel Style: ${userContext.preferences.travelStyle}` : ''}
+    ${userContext.preferences?.dietaryRestrictions?.length ? `- Dietary Restrictions: ${userContext.preferences.dietaryRestrictions.join(', ')}` : ''}
+    
+    Include:
+    1. Daily activities matching the interests and budget
+    2. Restaurant suggestions considering any dietary restrictions
+    3. Travel tips specific to the destination
+    4. Estimated costs for each activity and meal
+    
+    Format the response in clean markdown with clear sections for each day.
+    `;
+  }
+  
+  private async getUserContext(userId: number): Promise<{
+    fullName?: string;
+    preferences?: {
+      travelStyle?: string;
+      dietaryRestrictions?: string[];
+    };
+  }> {
+    // Return a mock user context
+    return {
+      fullName: 'Traveler',
+      preferences: {
+        travelStyle: 'adventure',
+        dietaryRestrictions: []
+      }
+    };
+  }
+
+  private generateMockItinerary(request: ItineraryRequest): string {
+    console.log('[AIService] Generating mock itinerary');
+    return `# Your ${request.duration}-Day Trip to ${request.destination}
+
+## Day 1: Arrival
+- Arrive in ${request.destination}
+- Check into your accommodation
+- Explore the local area
+- Dinner at a local restaurant
+
+## Day 2: Sightseeing
+- Morning: Visit popular attractions
+- Afternoon: ${request.interests.length > 0 ? `Enjoy ${request.interests.join(', ')} activities` : 'Free time to explore'}
+- Evening: Relax at your accommodation
+
+## Day 3: Departure
+- Breakfast at the hotel
+- Check out and head to the airport
+
+This is a mock itinerary. The AI model is not currently available. Please check your internet connection and try again later.`;
+  }
+}
+
+// Initialize the service when imported
+const aiService = AIService.getInstance();
+aiService.initialize().catch((error: Error) => {
+  console.error('Failed to initialize AI service:', error);
+});
+
+export default aiService;

@@ -1,0 +1,25 @@
+DB - Environment variables loaded from: C:\Users\Jefrash Eada\OneDrive\Desktop\PROJECTS\TravelBuddy-main\TravelBuddy-main\.env
+Environment variables loaded from: C:\Users\Jefrash Eada\OneDrive\Desktop\PROJECTS\TravelBuddy-main\.env
+FOURSQUARE_API_KEY present: false
+Starting server process... Using port 5000
+✅ Server successfully started!
+🌐 Server listening on http://0.0.0.0:5000
+11:04:20 PM [express] serving on port 5000
+[API] Searching for places in: New York
+🔍 Getting places for city: New York
+🔍 Geocoding city: New York
+📍 Using predefined coordinates for: New York
+📍 Found city: New York, NY, USA (40.7128, -74.006)
+🌐 Making request to Geoapify Places API
+🔑 Geoapify API Key: Present
+Search Parameters: { query: 'attraction', lat: 40.7128, lon: -74.006 }
+🔍 Searching for places...
+📡 Sending request to Geoapify Places API
+Request URL: https://api.geoapify.com/v2/places
+Request params: {
+  categories: 'tourism,entertainment,catering,commercial',
+  filter: 'circle:-74.006,40.7128,5000',
+  bias: 'proximity:-74.006,40.7128',
+  limit: 10,
+  apiKey: '***'
+}
